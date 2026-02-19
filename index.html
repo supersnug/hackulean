@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HacKulean - Defeat Spamton</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1 class="title">⚠️ HACKULEAN ⚠️</h1>
+        <p class="subtitle">HPT vs Hack Organization</p>
+        <div class="hpt-status">
+          <span class="hpt-health"
+            >HPT SHIELDS: <span id="hpt-health-text">100%</span></span
+          >
+          <div class="hpt-health-bar">
+            <div id="hpt-health-bar" class="hpt-health-fill"></div>
+          </div>
+        </div>
+      </header>
+
+      <div class="menu-tabs">
+        <button class="menu-btn active" data-menu="find">🔍 FIND</button>
+        <button class="menu-btn" data-menu="hack">⚔️ HACK</button>
+        <button class="menu-btn" data-menu="breach">🔓 BREACH</button>
+        <button class="menu-btn" data-menu="defense">🛡️ DEFENSE</button>
+      </div>
+
+      <div class="main-content">
+        <!-- FIND MENU -->
+        <div id="find-menu" class="menu-section active">
+          <div class="section-title">NETWORK PROBE SCANNER</div>
+          <div class="input-section">
+            <label for="probe-ip">Probe IP Address:</label>
+            <input type="text" id="probe-ip" placeholder="XXX.XXX.XXX.XXX" />
+            <button id="probe-btn" class="action-btn">PROBE</button>
+            <p class="hint">*Scan for server signatures and vulnerabilities*</p>
+          </div>
+
+          <div class="discoveries">
+            <h3>DISCOVERED SIGNATURES</h3>
+            <div id="signatures-list" class="signatures-list"></div>
+          </div>
+
+          <div class="log-section">
+            <h3>PROBE LOG</h3>
+            <div id="probe-log-output" class="log-output"></div>
+          </div>
+        </div>
+
+        <!-- HACK MENU -->
+        <div id="hack-menu" class="menu-section">
+          <div class="section-title">ATTACK INTERFACE</div>
+          <div class="target-section">
+            <h2>Target: <span id="target-name">UNKNOWN</span></h2>
+            <div class="target-status">
+              <div class="status-bar">
+                <div id="target-health" class="health-bar"></div>
+              </div>
+              <p id="target-health-text">0% INTEGRITY</p>
+            </div>
+          </div>
+
+          <div class="input-section">
+            <label for="hack-ip">Target IP Address:</label>
+            <input
+              type="text"
+              id="hack-ip"
+              placeholder="Enter discovered IP..."
+            />
+            <p class="hint">*Use FIND menu to discover Spamton's location*</p>
+          </div>
+
+          <div class="buttons-grid">
+            <button class="hack-btn" data-attack="firewall">
+              <span class="icon">🔥</span>
+              <span class="label">FIREWALL</span>
+              <span class="label-sub">INSTALL</span>
+            </button>
+            <button class="hack-btn" data-attack="virus">
+              <span class="icon">🦠</span>
+              <span class="label">VIRUS</span>
+              <span class="label-sub">INJECT</span>
+            </button>
+            <button class="hack-btn" data-attack="ddos">
+              <span class="icon">⚡</span>
+              <span class="label">DDOS</span>
+              <span class="label-sub">ATTACK</span>
+            </button>
+            <button class="hack-btn" data-attack="encrypt">
+              <span class="icon">🔐</span>
+              <span class="label">ENCRYPT</span>
+              <span class="label-sub">FILES</span>
+            </button>
+            <button class="hack-btn" data-attack="backup">
+              <span class="icon">💾</span>
+              <span class="label">BACKUP</span>
+              <span class="label-sub">SYSTEM</span>
+            </button>
+            <button class="hack-btn" data-attack="override">
+              <span class="icon">🎮</span>
+              <span class="label">OVERRIDE</span>
+              <span class="label-sub">CONTROL</span>
+            </button>
+          </div>
+
+          <div class="log-section">
+            <h3>ATTACK LOG</h3>
+            <div id="hack-log-output" class="log-output"></div>
+          </div>
+        </div>
+
+        <!-- BREACH MENU -->
+        <div id="breach-menu" class="menu-section">
+          <div class="section-title">PROTECTION BYPASS TOOLS</div>
+
+          <div class="breach-info">
+            <p>
+              Use these tools to break through server protections before
+              attacking. Higher protection requires more breaches.
+            </p>
+          </div>
+
+          <div class="breaches-grid">
+            <button class="breach-btn" data-breach="encryption">
+              <span class="icon">🔑</span>
+              <span class="label">BREAK</span>
+              <span class="label-sub">ENCRYPTION</span>
+            </button>
+            <button class="breach-btn" data-breach="tracking">
+              <span class="icon">📍</span>
+              <span class="label">DISABLE</span>
+              <span class="label-sub">TRACKING</span>
+            </button>
+            <button class="breach-btn" data-breach="monitoring">
+              <span class="icon">👁️</span>
+              <span class="label">BLIND</span>
+              <span class="label-sub">MONITORING</span>
+            </button>
+          </div>
+
+          <div class="current-target-breach">
+            <h3>CURRENT TARGET</h3>
+            <div id="breach-target-info" class="breach-target-info"></div>
+          </div>
+
+          <div class="log-section">
+            <h3>BREACH LOG</h3>
+            <div id="breach-log-output" class="log-output"></div>
+          </div>
+        </div>
+
+        <!-- DEFENSE MENU -->
+        <div id="defense-menu" class="menu-section">
+          <div class="section-title">DEFENSE MANAGEMENT</div>
+
+          <div class="hpt-info">
+            <div class="hpt-shield-bar">
+              <div class="shield-label">HPT SHIELD STATUS</div>
+              <div class="shield-background">
+                <div id="defense-health-bar" class="shield-fill"></div>
+              </div>
+              <span id="defense-health-text">100%</span>
+            </div>
+          </div>
+
+          <div class="defenses-grid">
+            <button class="defense-btn" data-defense="antivirus">
+              <span class="icon">💉</span>
+              <span class="label">ANTIVIRUS</span>
+              <span class="label-sub">Build</span>
+            </button>
+            <button class="defense-btn" data-defense="firewall">
+              <span class="icon">🧱</span>
+              <span class="label">FIREWALL</span>
+              <span class="label-sub">Build</span>
+            </button>
+            <button class="defense-btn" data-defense="vpn">
+              <span class="icon">🔒</span>
+              <span class="label">VPN</span>
+              <span class="label-sub">Build</span>
+            </button>
+            <button class="defense-btn" data-defense="backup">
+              <span class="icon">💾</span>
+              <span class="label">BACKUP</span>
+              <span class="label-sub">Build</span>
+            </button>
+          </div>
+
+          <div class="active-defenses">
+            <h3>ACTIVE DEFENSES</h3>
+            <div id="defenses-list" class="defenses-list"></div>
+          </div>
+
+          <div class="log-section">
+            <h3>DEFENSE LOG</h3>
+            <div id="defense-log-output" class="log-output"></div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <p id="status-message">Initializing HacKulean...</p>
+        <button id="reset-btn" class="reset-btn">Reset Mission</button>
+      </footer>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
