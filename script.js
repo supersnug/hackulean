@@ -1212,9 +1212,15 @@ function showSaruleanModal(onContinue) {
   document.body.appendChild(overlay);
 
   function cleanup() {
+    if (cleanup._done) return;
+    cleanup._done = true;
     if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
     document.removeEventListener("click", docListener, true);
-    if (typeof onContinue === "function") onContinue();
+    try {
+      if (typeof onContinue === "function") onContinue();
+    } catch (e) {
+      console.error("Error in router onContinue:", e);
+    }
   }
 
   // clicking anywhere or pressing the button continues
@@ -1277,9 +1283,7 @@ function showRouterModal(onContinue) {
     if (typeof onContinue === "function") onContinue();
   }
 
-  const docListener = (ev) => {
-    cleanup();
-  };
+  const docListener = (ev) => cleanup();
 
   document.getElementById("router-continue").addEventListener("click", cleanup);
   document.addEventListener("click", docListener, true);
