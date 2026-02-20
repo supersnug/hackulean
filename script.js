@@ -547,6 +547,21 @@ function executeAttack(ip, attack, attackType) {
   const signature = gameState.discoveredIPs[ip];
   const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
   const ipLower = (ip || "").toLowerCase();
+  // Router easter-egg: hacking local router shows fake "No internet" screen
+  if (ipLower === "192.168.1.1") {
+    showRouterModal(() => {
+      const msg = "Internet lost! Using alternative router...";
+      addProbeLog(msg, "warning");
+      addHackLog(msg, "warning");
+      addBreachLog(msg, "warning");
+      addDefenseLog(msg, "warning");
+
+      gameState.isHacking = false;
+      enableHackButtons();
+    });
+
+    return;
+  }
   const totalBreaches = Object.values(gameState.breaches).reduce(
     (a, b) => a + b,
     0,
