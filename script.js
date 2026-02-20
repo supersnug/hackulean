@@ -262,21 +262,6 @@ function probeIP() {
     return;
   }
 
-  // Special easter-egg for local router: show fake "No internet" modal
-  if (ip.toLowerCase() === "192.168.1.1") {
-    showRouterModal(() => {
-      const msg = "Internet lost! Using alternative router...";
-      addProbeLog(msg, "warning");
-      addHackLog(msg, "warning");
-      addBreachLog(msg, "warning");
-      addDefenseLog(msg, "warning");
-
-      gameState.isHacking = false;
-      enableHackButtons();
-    });
-
-    return;
-  }
   // Special developer/test token: THE.GAME
   if (ip.toUpperCase() === "THE.GAME") {
     addProbeLog("> Probing THE.GAME...", "info");
