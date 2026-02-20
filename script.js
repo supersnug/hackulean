@@ -115,12 +115,13 @@ function initializeSpamtonIP() {
     hint: "PRIMARY TARGET: Spamton's main headquarters",
   };
 
-  // Remove any previous Spamton entries and add the new one
+  // Remove only previous Spamton HQ entries (not the decoy)
   for (let i = allIPs.length - 1; i >= 0; i--) {
     const entry = allIPs[i];
     if (
-      (entry.owner && entry.owner.includes("Spamton")) ||
-      (entry.signature && entry.signature.includes("Spamton"))
+      entry.signature === "Spamton HQ - CRITICAL THREAT" ||
+      (entry.owner === "Spamton (Hack Organization)" &&
+        entry.signature !== "Spamton Decoy Server")
     ) {
       allIPs.splice(i, 1);
     }
@@ -1200,12 +1201,13 @@ function showSaruleanModal(onContinue) {
 
 function setSpamtonIP(newIP) {
   if (!newIP) return;
-  // remove any previous Spamton entries
+  // Remove only previous Spamton HQ entries (not the decoy)
   for (let i = allIPs.length - 1; i >= 0; i--) {
     const entry = allIPs[i];
     if (
-      (entry.owner && entry.owner.includes("Spamton")) ||
-      (entry.signature && entry.signature.includes("Spamton"))
+      entry.signature === "Spamton HQ - CRITICAL THREAT" ||
+      (entry.owner === "Spamton (Hack Organization)" &&
+        entry.signature !== "Spamton Decoy Server")
     ) {
       allIPs.splice(i, 1);
     }
