@@ -262,6 +262,21 @@ function probeIP() {
     return;
   }
 
+  // Special easter-egg for local router: show fake "No internet" modal
+  if (ipLower === "192.168.1.1") {
+    showRouterModal(() => {
+      const msg = "Internet lost! Using alternative router...";
+      addProbeLog(msg, "warning");
+      addHackLog(msg, "warning");
+      addBreachLog(msg, "warning");
+      addDefenseLog(msg, "warning");
+
+      gameState.isHacking = false;
+      enableHackButtons();
+    });
+
+    return;
+  }
   // Special developer/test token: THE.GAME
   if (ip.toUpperCase() === "THE.GAME") {
     addProbeLog("> Probing THE.GAME...", "info");
@@ -545,12 +560,17 @@ function handleAttack(e) {
 
 function executeAttack(ip, attack, attackType) {
   const signature = gameState.discoveredIPs[ip];
+  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
   const ipLower = (ip || "").toLowerCase();
   const totalBreaches = Object.values(gameState.breaches).reduce(
     (a, b) => a + b,
     0,
   );
-  const protectionNeeded = (signature && signature.protection) || 0;
+  // Check protection from either discovered signature OR from allIPs database
+  const protectionNeeded =
+    (signature && signature.protection) ||
+    (allIPsEntry && allIPsEntry.protection) ||
+    0;
 
   // Check if protections need to be broken first
   if (protectionNeeded > 0 && totalBreaches < protectionNeeded) {
@@ -653,9 +673,11 @@ function applyDamageToTarget(ip, damage) {
 
 function triggerCounterhack(ip, attack) {
   const signature = gameState.discoveredIPs[ip];
+  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
 
-  // Only hacker-type servers counterhack
-  if (!signature || signature.type !== "hacker") {
+  // Check if this is a hacker-type server (discovered or undiscovered)
+  const serverInfo = signature || allIPsEntry;
+  if (!serverInfo || serverInfo.type !== "hacker") {
     return;
   }
 
@@ -677,7 +699,7 @@ function triggerCounterhack(ip, attack) {
 
   addHackLog("⚠️ INCOMING COUNTERHACK!", "error");
   addHackLog(
-    `> ${signature.owner} is retaliating against our attack...`,
+    `> ${serverInfo.owner} is retaliating against our attack...`,
     "warning",
   );
 
@@ -1071,7 +1093,10 @@ function useBreach(e) {
   if (gameState.isGameOver) return;
 
   const signature = gameState.discoveredIPs[ip];
-  if (!signature || !signature.protection || signature.protection === 0) {
+  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
+  const targetInfo = signature || allIPsEntry;
+
+  if (!targetInfo || !targetInfo.protection || targetInfo.protection === 0) {
     addBreachLog(`⚠️ ${ip} has no protection to breach`, "warning");
     return;
   }
@@ -1087,13 +1112,13 @@ function useBreach(e) {
 
     addBreachLog(`✓ ${breachType} barrier bypassed!`, "success");
     addBreachLog(
-      `  Total breaches: ${totalBreaches}/${signature.protection}`,
+      `  Total breaches: ${totalBreaches}/${targetInfo.protection}`,
       "info",
     );
 
-    if (totalBreaches >= signature.protection) {
+    if (totalBreaches >= targetInfo.protection) {
       addBreachLog(
-        `✓ COMPLETE: All protections bypassed for ${signature.owner}`,
+        `✓ COMPLETE: All protections bypassed for ${targetInfo.owner}`,
         "success",
       );
       addBreachLog(`  Ready to attack - visit HACK menu`, "success");
@@ -1105,7 +1130,12 @@ function useBreach(e) {
 
 function updateBreachTargetInfo(ip) {
   const signature = gameState.discoveredIPs[ip];
-  if (!signature) {
+  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
+
+  // Use discovered signature if available, otherwise check allIPs
+  const targetInfo = signature || allIPsEntry;
+
+  if (!targetInfo) {
     document.getElementById("breach-target-info").innerHTML =
       "<p>No target selected</p>";
     return;
@@ -1115,12 +1145,12 @@ function updateBreachTargetInfo(ip) {
     (a, b) => a + b,
     0,
   );
-  const protectionNeeded = signature.protection || 0;
+  const protectionNeeded = targetInfo.protection || 0;
   const breachesRemaining = Math.max(0, protectionNeeded - totalBreaches);
 
   document.getElementById("breach-target-info").innerHTML = `
     <div class="breach-target">
-      <p><strong>${signature.owner}</strong></p>
+      <p><strong>${targetInfo.owner}</strong></p>
       <p>IP: ${ip}</p>
       <p>Protection Level: ${protectionNeeded}/5</p>
       <p>Breaches completed: ${totalBreaches}/${protectionNeeded}</p>
@@ -1196,6 +1226,62 @@ function showSaruleanModal(onContinue) {
   document
     .getElementById("sarulean-continue")
     .addEventListener("click", cleanup);
+  document.addEventListener("click", docListener, true);
+}
+
+function showRouterModal(onContinue) {
+  // Create a fake Chrome "no internet" page
+  const overlay = document.createElement("div");
+  overlay.id = "router-overlay";
+  overlay.style.position = "fixed";
+  overlay.style.left = "0";
+  overlay.style.top = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+  overlay.style.background = "#f1f1f1";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.zIndex = "9999";
+  overlay.style.fontFamily = "Segoe UI, Arial, sans-serif";
+  overlay.style.color = "#333";
+
+  const box = document.createElement("div");
+  box.style.textAlign = "center";
+  box.style.maxWidth = "600px";
+  box.style.padding = "40px 20px";
+  box.innerHTML = `
+    <div style="font-size: 72px; margin-bottom: 20px;">🔌</div>
+    <h1 style="font-size: 28px; margin: 0 0 10px 0; font-weight: 600;">No internet</h1>
+    <p style="font-size: 16px; margin: 0 0 20px 0; color: #666;">Check your connection</p>
+    <p style="font-size: 14px; margin: 0 0 30px 0; color: #999;">
+      Your local router (192.168.1.1) has been compromised!
+    </p>
+    <button id="router-continue" style="
+      background: #d33b27;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+    ">Try to recover</button>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  function cleanup() {
+    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    document.removeEventListener("click", docListener, true);
+    if (typeof onContinue === "function") onContinue();
+  }
+
+  const docListener = (ev) => {
+    cleanup();
+  };
+
+  document.getElementById("router-continue").addEventListener("click", cleanup);
   document.addEventListener("click", docListener, true);
 }
 
