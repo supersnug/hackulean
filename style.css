@@ -840,6 +840,21 @@ footer {
   }
 }
 
+/* Conditional Victory state (mission complete but suspicious) */
+.conditional-victory {
+  animation: conditionalVictoryFlash 0.5s ease-in-out;
+}
+
+@keyframes conditionalVictoryFlash {
+  0%,
+  100% {
+    background: rgba(10, 14, 39, 0.9);
+  }
+  50% {
+    background: rgba(255, 170, 0, 0.2);
+  }
+}
+
 /* Scrollbar styling */
 .log-output::-webkit-scrollbar {
   width: 8px;

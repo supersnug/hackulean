@@ -10,6 +10,8 @@ const gameState = {
   targetHealthByIP: {},
   targetProtectionByIP: {},
   discoveredIPs: {},
+  suspiciousHacks: {}, // Track undiscovered Google/Cloudflare hacks: { "8.8.8.8": true }
+  falseWin: false, // Won Spamton but have undiscovered legitimate IPs hacked
   breaches: {
     encryption: 0,
     tracking: 0,
@@ -322,7 +324,28 @@ function probeIP() {
           "success",
         );
       }
-      // Provide subtle hints that can guide discovery
+
+      // Check if this IP was previously hacked without discovery
+      if (gameState.suspiciousHacks[ip]) {
+        addProbeLog("", "error");
+        addProbeLog(
+          "⚠️ CRITICAL REALIZATION: You have records of hacking this system!",
+          "error",
+        );
+        addProbeLog(
+          `✗ ${foundIP.owner} - you realize what you've done.`,
+          "error",
+        );
+        addProbeLog("", "error");
+
+        // Trigger immediate loss
+        handleLoss(`You hacked ${foundIP.owner}! MISSION FAILED!`);
+        gameState.isProbing = false;
+        document.getElementById("probe-ip").value = "";
+        return;
+      }
+
+      // Strategic hint system: use first octet to guide discovery
       if (
         gameState.correctIP &&
         ip !== gameState.correctIP &&
@@ -331,16 +354,49 @@ function probeIP() {
         try {
           const correctFirst = gameState.correctIP.split(".")[0];
           const probeFirst = ip.split(".")[0];
-          if (correctFirst === probeFirst) {
-            addProbeLog(
-              `> Hint: Network activity seems to reference ${correctFirst}.* addresses`,
-              "info",
-            );
-          } else {
-            addProbeLog(
-              "> Hint: Try scanning other external network ranges for anomalies",
-              "info",
-            );
+
+          // Guide toward Spamton (187)
+          if (correctFirst === "187") {
+            if (probeFirst === "187") {
+              addProbeLog(
+                `> ALERT: Significant network anomalies detected in the 187 region`,
+                "warning",
+              );
+              addProbeLog(
+                `> Intelligence suggests high-value targets in this range`,
+                "info",
+              );
+            } else if (probeFirst === "203") {
+              // Decoy range - make it tempting but suspicious
+              addProbeLog(
+                `> WARNING: Strong hacker signatures detected in the 203 region`,
+                "warning",
+              );
+              addProbeLog(
+                `> Could be a valid target, but may be unconventional infrastructure`,
+                "info",
+              );
+            } else if (probeFirst >= "180" && probeFirst <= "189") {
+              // Getting close to the right range
+              addProbeLog(
+                `> Network scan showing elevated activity in the 180-189 range`,
+                "warning",
+              );
+              addProbeLog(
+                `> Your target may be nearby. Keep scanning systematically`,
+                "info",
+              );
+            } else {
+              // Wrong range but not immediately dismissed
+              addProbeLog(
+                `> This region shows normal Internet traffic patterns`,
+                "info",
+              );
+              addProbeLog(
+                `> Consider expanding your scan to adjacent network blocks`,
+                "info",
+              );
+            }
           }
         } catch (e) {
           // ignore
@@ -633,6 +689,98 @@ function triggerCounterhack(ip, attack) {
   }, 500);
 }
 
+function triggerDecoyFail() {
+  // Disable all hack buttons immediately
+  disableHackButtons();
+  gameState.isGameOver = true;
+
+  // Create dramatic visual overlay
+  const overlay = document.createElement("div");
+  overlay.id = "decoy-fail-overlay";
+  overlay.style.position = "fixed";
+  overlay.style.left = "0";
+  overlay.style.top = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+  overlay.style.background = "rgba(0,0,0,0.95)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.zIndex = "9999";
+  overlay.style.color = "#ff0000";
+  overlay.style.fontFamily = "monospace";
+  overlay.style.fontSize = "24px";
+  overlay.style.textAlign = "center";
+  overlay.style.lineHeight = "1.6";
+
+  const message = document.createElement("div");
+  message.style.maxWidth = "800px";
+  message.style.padding = "40px";
+  message.style.animation = "pulse 1s infinite";
+  message.innerHTML = `
+    <div style="font-size: 48px; font-weight: bold; margin-bottom: 20px; color: #ff0000;">
+      ⚠️ SYSTEM COMPROMISED ⚠️
+    </div>
+    <div style="font-size: 28px; color: #ffaa00; margin-bottom: 30px;">
+      YOU HAVE BEEN HACKED
+    </div>
+    <div style="font-size: 16px; color: #00ff00; margin-bottom: 20px;">
+      A DECOY SERVER LED YOU INTO A TRAP
+    </div>
+  `;
+  message.style.borderTop = "3px solid #ff0000";
+  message.style.borderBottom = "3px solid #ff0000";
+  message.style.paddingTop = "30px";
+  message.style.paddingBottom = "30px";
+
+  overlay.appendChild(message);
+  document.body.appendChild(overlay);
+
+  // Add CSS animation for pulsing effect if not already present
+  if (!document.getElementById("decoy-fail-style")) {
+    const style = document.createElement("style");
+    style.id = "decoy-fail-style";
+    style.textContent = `
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+      @keyframes shieldDrain {
+        from { width: 100%; }
+        to { width: 0%; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Animate defense/shield health bar draining
+  const defenseBar = document.getElementById("defense-health-bar");
+  if (defenseBar) {
+    defenseBar.style.animation = "shieldDrain 4s ease-in forwards";
+    defenseBar.style.background = "linear-gradient(90deg, #ff0000, #aa0000)";
+  }
+
+  // Update game state to show loss condition
+  addHackLog("", "error");
+  addHackLog("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓", "error");
+  addHackLog("✗ DECOY TRAP ACTIVATED", "error");
+  addHackLog("✗ YOUR SYSTEMS ARE UNDER ATTACK", "error");
+  addHackLog("✗ DEFENSE SHIELDS COMPROMISED", "error");
+  addHackLog("✗ MISSION FAILED", "error");
+  addHackLog("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓", "error");
+
+  updateStatusMessage(
+    "⚠️ DECOY TRAP! SYSTEMS COMPROMISED! YOU HAVE BEEN HACKED!",
+  );
+
+  // Remove overlay after 5 seconds (but keep game over state active)
+  setTimeout(() => {
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
+  }, 5000);
+}
+
 function applyDamageToHPT(damage) {
   gameState.hptHealth = Math.max(0, gameState.hptHealth - damage);
   updateHPTDisplay();
@@ -643,6 +791,9 @@ function applyDamageToHPT(damage) {
 function updateTargetDisplay(ip) {
   const health = gameState.targetHealthByIP[ip] || 0;
   const signature = gameState.discoveredIPs[ip];
+
+  // Also check allIPs in case we're checking a legitimate target that wasn't discovered yet
+  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
 
   document.getElementById("target-name").textContent = signature
     ? signature.owner.toUpperCase()
@@ -672,42 +823,123 @@ function updateTargetDisplay(ip) {
       unlockDevMenu();
       return;
     }
+
+    // Victory: destroyed the true Spamton HQ
     if (ip === gameState.correctIP) {
-      // Victory: destroyed the true Spamton HQ
-      handleVictory();
-    } else if (signature && signature.type === "legitimate") {
-      // Special-case: Google does NOT cause an immediate loss, Cloudflare does
-      if (
-        signature.owner &&
-        signature.owner.toLowerCase().includes("cloudflare")
-      ) {
-        handleLoss(
-          `CRITICAL ERROR: You destroyed ${signature.owner}! They were innocent!`,
-        );
-      } else if (
-        signature.owner &&
-        signature.owner.toLowerCase().includes("google")
-      ) {
+      // Check if we have any suspicious hacks outstanding
+      const hasSuspiciousHacks =
+        Object.keys(gameState.suspiciousHacks).length > 0;
+
+      if (hasSuspiciousHacks) {
+        // Conditional victory: won but need to find what we hacked
+        gameState.falseWin = true;
+        gameState.isGameOver = true;
+        disableHackButtons();
+
+        const suspiciousIPs = Object.keys(gameState.suspiciousHacks);
+        const hostNames = suspiciousIPs
+          .map((ip) => {
+            const entry = allIPs.find((e) => e.ip === ip);
+            return entry ? entry.owner : ip;
+          })
+          .join(", ");
+
+        document
+          .querySelector(".container")
+          .classList.add("conditional-victory");
+        updateStatusMessage("🤔 MISSION COMPLETE...? 🤔");
+
+        addHackLog("", "warning");
+        addHackLog("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓", "warning");
+        addHackLog("✓ SPAMTON'S HEADQUARTERS DESTROYED", "success");
+        addHackLog("", "warning");
         addHackLog(
-          `✗ ${signature.owner} damaged. Note: this is a major provider, proceed with caution but no immediate mission failure.`,
+          "⚠️ BUT... something feels wrong about this victory.",
           "warning",
         );
+        addHackLog("⚠️ Log analysis shows suspicious activity:", "warning");
+        addHackLog(`⚠️ You hacked: ${hostNames}`, "error");
+        addHackLog("", "warning");
+        addHackLog("⚠️ ATTEMPT TO IDENTIFY THE IPs YOU ATTACKED:", "warning");
+        addHackLog(
+          "> Use FIND menu to probe the IPs you may have damaged.",
+          "info",
+        );
+        addHackLog("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓", "warning");
       } else {
-        // other legitimate providers -> loss
-        handleLoss(
-          `CRITICAL ERROR: You destroyed ${signature.owner}! They were innocent!`,
+        // Pure victory: no suspicious hacks
+        handleVictory();
+      }
+      return;
+    }
+
+    // Handle discovered legitimate targets
+    if (signature && signature.type === "legitimate") {
+      // All discovered legitimate targets (Google, Cloudflare, etc.) cause immediate loss
+      handleLoss(
+        `CRITICAL ERROR: You destroyed ${signature.owner}! They were innocent!`,
+      );
+      return;
+    }
+
+    // Handle discovered hacker targets
+    if (signature && signature.type === "hacker") {
+      // Destroyed another hacker target - check if it's the decoy
+      if (ip === "203.45.178.92") {
+        // Decoy server - trigger dramatic fail cutscene
+        triggerDecoyFail();
+      } else {
+        // Other hacker target - no loss, just warning
+        addHackLog(
+          `✗ ${signature.owner} destroyed, but this was not the primary target`,
+          "warning",
+        );
+        addHackLog(
+          `> Continue searching for Spamton's true headquarters`,
+          "info",
         );
       }
-    } else if (signature && signature.type === "hacker") {
-      // Destroyed another hacker target (like Spamton Decoy) - no loss, just warning
-      addHackLog(
-        `✗ ${signature.owner} destroyed, but this was not the primary target`,
-        "warning",
-      );
-      addHackLog(
-        `> Continue searching for Spamton's true headquarters`,
-        "info",
-      );
+      return;
+    }
+
+    // Handle UNDISCOVERED legitimate targets (hacked blind)
+    if (allIPsEntry && allIPsEntry.type === "legitimate") {
+      const isGoogle =
+        allIPsEntry.owner && allIPsEntry.owner.toLowerCase().includes("google");
+      const isCloudflare =
+        allIPsEntry.owner &&
+        allIPsEntry.owner.toLowerCase().includes("cloudflare");
+
+      if (isCloudflare || isGoogle) {
+        // Both Google AND Cloudflare hacked blind: show warning, track it, allow continuation
+        addHackLog("", "error");
+        addHackLog("⚠️ You have a bad feeling about this...", "error");
+        addHackLog(
+          `✗ Something just happened on the network, but you can't identify what.`,
+          "error",
+        );
+        addHackLog(
+          "> Suggest: Use FIND menu to probe around and determine what you just hit.",
+          "warning",
+        );
+        addHackLog("", "error");
+
+        // Track this as a suspicious hack
+        gameState.suspiciousHacks[ip] = true;
+      } else {
+        // Other legitimate providers hacked blind -> loss
+        handleLoss(
+          `CRITICAL ERROR: You destroyed ${allIPsEntry.owner}! They were innocent!`,
+        );
+      }
+      return;
+    }
+
+    // Handle undiscovered hacker target (unknown server)
+    if (!signature && !allIPsEntry) {
+      // Random server destroyed - no consequences
+      addHackLog(`✗ Random server destroyed`, "warning");
+      return;
     }
   }
 }
@@ -1020,6 +1252,7 @@ function unlockDevMenu() {
     <div class="section-title">DEV MENU (Testing Tools)</div>
     <div class="dev-grid">
       <button id="dev-force-win" class="action-btn">Force WIN</button>
+      <button id="dev-force-false-win" class="action-btn">Force False WIN</button>
       <button id="dev-force-loss" class="action-btn">Force LOSS</button>
       <button id="dev-show-spam" class="action-btn">Show Spamton IP</button>
       <button id="dev-reveal-all" class="action-btn">Reveal All IPs</button>
@@ -1055,6 +1288,19 @@ function unlockDevMenu() {
     addDevLog("Forcing victory...", "info");
     handleVictory();
   });
+  document
+    .getElementById("dev-force-false-win")
+    .addEventListener("click", () => {
+      addDevLog("Forcing false victory...", "warning");
+      // Set up state for false win: Spamton destroyed with Google hacked but undiscovered
+      gameState.correctIP =
+        allIPs.find((ip) => ip.signature && ip.signature.includes("Spamton HQ"))
+          ?.ip || "187.45.123.89";
+      gameState.targetHealthByIP[gameState.correctIP] = 0;
+      gameState.suspiciousHacks["8.8.8.8"] = true;
+      gameState.falseWin = true;
+      updateTargetDisplay(gameState.correctIP);
+    });
   document.getElementById("dev-force-loss").addEventListener("click", () => {
     addDevLog("Forcing loss...", "error");
     handleLoss("Forced loss via DEV MENU");
@@ -1190,6 +1436,8 @@ function resetGame() {
   gameState.targetHealthByIP = {};
   gameState.targetProtectionByIP = {};
   gameState.discoveredIPs = {};
+  gameState.suspiciousHacks = {};
+  gameState.falseWin = false;
   gameState.breaches = {
     encryption: 0,
     tracking: 0,
@@ -1205,7 +1453,9 @@ function resetGame() {
   // Randomize Spamton's IP
   initializeSpamtonIP();
 
-  document.querySelector(".container").classList.remove("victory", "defeat");
+  document
+    .querySelector(".container")
+    .classList.remove("victory", "defeat", "conditional-victory");
 
   updateHPTDisplay();
   updateTargetDisplay(null);
