@@ -263,7 +263,7 @@ function probeIP() {
   }
 
   // Special easter-egg for local router: show fake "No internet" modal
-  if (ipLower === "192.168.1.1") {
+  if (ip.toLowerCase() === "192.168.1.1") {
     showRouterModal(() => {
       const msg = "Internet lost! Using alternative router...";
       addProbeLog(msg, "warning");
