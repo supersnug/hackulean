@@ -1,0 +1,34 @@
+name: Deploy Latest Tag to GitHub Pages
+
+on:
+  push:
+    tags:
+      - "*" # Trigger workflow on any tag push
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the specific tag that triggered the workflow
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }} # Checks out the pushed tag
+
+      # Optional: Build step for static site generators (Jekyll, Hugo, React, etc.)
+      # - name: Build Project
+      #   run: |
+      #     npm install
+      #     npm run build
+      #   # Ensure publish_dir corresponds to your build output
+
+      # Deploy to gh-pages branch using peaceiris action
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./ # Change to your build output directory if needed
+          publish_branch: gh-pages
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"

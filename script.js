@@ -24,6 +24,43 @@ const gameState = {
     backup: 0,
   },
   defenseHealth: {},
+
+  // CURRENCY SYSTEM
+  currencies: {
+    findPoints: 0,
+    hackPoints: 0,
+    breachPoints: 0,
+    defendPoints: 0,
+    hackcoins: 0,
+    maincoins: 0,
+  },
+
+  // FACTION SYSTEM
+  factionReputation: {}, // { factionId: reputationValue }
+  attackedFactions: {}, // Track which factions player has attacked
+
+  // STORY ROUTE TRACKING
+  currentRoute: "base", // "base", "pacifist", or "brutal"
+  routeLocked: false, // Becomes true after first attack on non-Spamton
+  attackedTargets: {}, // Track all attacked IPs to determine route
+
+  // SAVE SYSTEM
+  saveSlots: [null, null, null, null, null], // 5 save slots
+  autoSave: null, // Auto-save stored separately
+
+  // MISSIONS SYSTEM
+  currentMissionId: "mission_001_spamton", // Current mission
+  completedMissions: {}, // Track completed missions
+  missionProgress: {}, // Track progress on objectives
+
+  // JOBS SYSTEM (Phase 3)
+  availableJobs: {}, // Active jobs from NPCs
+  completedJobs: {}, // Completed jobs history
+  lastJobRefresh: null, // Timestamp of last daily refresh
+  jobsRefreshedToday: false, // Has job list been refreshed today
+
+  // UPGRADES SYSTEM (Phase 4)
+  upgrades: {}, // { upgradeId: true } for purchased upgrades
 };
 
 // All possible IPs for probing
@@ -88,6 +125,1152 @@ const allIPs = [
     hint: "Reflective node - might be a decoy",
   },
 ];
+
+// FACTION DEFINITIONS (8 factions)
+const factions = {
+  spamton: {
+    id: "spamton",
+    name: "Spamton Organization",
+    type: "hacker",
+    hackableRoutes: ["base", "pacifist", "brutal"],
+    allies: [],
+    ips: [], // Dynamically added (Spamton HQ randomized)
+  },
+  collective: {
+    id: "collective",
+    name: "The Collective",
+    type: "hacktivist",
+    hackableRoutes: ["base", "brutal"],
+    allies: ["cipher"],
+    ips: ["91.200.165.44", "91.200.165.45", "91.200.165.46"],
+  },
+  neonSyndicate: {
+    id: "neonSyndicate",
+    name: "Neon Syndicate",
+    type: "criminal",
+    hackableRoutes: ["base", "brutal"],
+    allies: ["voidEcho"],
+    ips: ["77.88.99.11", "77.88.99.12", "77.88.99.13"],
+  },
+  ghostProtocol: {
+    id: "ghostProtocol",
+    name: "Ghost Protocol",
+    type: "hacker",
+    hackableRoutes: ["base", "brutal"],
+    allies: ["mirrorNet"],
+    ips: ["62.34.56.78", "62.34.56.79", "62.34.56.80"],
+  },
+  ironGuard: {
+    id: "ironGuard",
+    name: "Iron Guard",
+    type: "corporate",
+    hackableRoutes: ["base", "brutal"],
+    allies: ["cipher"],
+    ips: ["134.209.29.103", "134.209.29.104", "134.209.29.105"],
+  },
+  cipher: {
+    id: "cipher",
+    name: "Cipher Collective",
+    type: "agency",
+    hackableRoutes: ["brutal"],
+    allies: ["collective", "ironGuard"],
+    ips: ["198.51.100.42", "198.51.100.43", "198.51.100.44"],
+  },
+  mirrorNet: {
+    id: "mirrorNet",
+    name: "Mirror Net",
+    type: "broker",
+    hackableRoutes: ["base", "brutal"],
+    allies: ["ghostProtocol"],
+    ips: ["45.33.32.156", "45.33.32.157", "45.33.32.158"],
+  },
+  voidEcho: {
+    id: "voidEcho",
+    name: "Void Echo",
+    type: "rogue_ai",
+    hackableRoutes: ["base", "brutal"],
+    allies: ["neonSyndicate"],
+    ips: ["192.0.2.195", "192.0.2.196", "192.0.2.197"],
+  },
+};
+
+// MISSIONS SYSTEM
+const missions = {
+  mission_001_intro: {
+    id: "mission_001_intro",
+    title: "Network Reconnaissance",
+    description:
+      "HPT briefing: Intelligence reports suggest Spamton has been coordinating with underworld factions. Begin surveillance.",
+    objective: "Discover and identify at least 3 faction networks",
+    rewards: {
+      hackcoins: 0,
+      experience: 50,
+    },
+    nextMission: "mission_002_collective",
+  },
+  mission_002_collective: {
+    id: "mission_002_collective",
+    title: "The Collective Investigation",
+    description:
+      "Our analysts tracked encrypted communications to The Collective, a hacktivist group. Investigate their operations.",
+    objective: "Discover all Collective network nodes (91.200.165.44-46)",
+    rewards: {
+      hackcoins: 0,
+      experience: 75,
+    },
+    nextMission: "mission_003_neon",
+  },
+  mission_003_neon: {
+    id: "mission_003_neon",
+    title: "Neon Syndicate Tracking",
+    description:
+      "Intelligence suggests criminal networks are involved. Track the Neon Syndicate's operations.",
+    objective: "Discover all Neon Syndicate nodes (77.88.99.11-13)",
+    rewards: {
+      hackcoins: 0,
+      experience: 75,
+    },
+    nextMission: "mission_004_ghost",
+  },
+  mission_004_ghost: {
+    id: "mission_004_ghost",
+    title: "Ghost Protocol Monitoring",
+    description:
+      "A rogue hacking collective has caught our attention. Monitor Ghost Protocol's infrastructure.",
+    objective: "Discover all Ghost Protocol nodes (62.34.56.78-80)",
+    rewards: {
+      hackcoins: 0,
+      experience: 75,
+    },
+    nextMission: "mission_005_corporate",
+  },
+  mission_005_corporate: {
+    id: "mission_005_corporate",
+    title: "Iron Guard Connection",
+    description:
+      "Evidence suggests corporate interests are protecting Spamton. Investigate Iron Guard's involvement.",
+    objective: "Discover all Iron Guard nodes (134.209.29.103-105)",
+    rewards: {
+      hackcoins: 0,
+      experience: 75,
+    },
+    nextMission: "mission_006_cipher_briefing",
+  },
+  mission_006_cipher_briefing: {
+    id: "mission_006_cipher_briefing",
+    title: "Cipher Collective Alert",
+    description:
+      "WARNING: A government agency called Cipher Collective has been detected. They protect elite networks. Avoid direct confrontation.",
+    objective:
+      "Map Cipher Collective infrastructure (198.51.100.42-44) - Intel only, no attacks",
+    rewards: {
+      hackcoins: 0,
+      experience: 50,
+    },
+    nextMission: "mission_007_broker",
+  },
+  mission_007_broker: {
+    id: "mission_007_broker",
+    title: "Mirror Net Intelligence",
+    description:
+      "A network broker facilitating all these connections has been identified. Catalog Mirror Net nodes.",
+    objective: "Discover all Mirror Net nodes (45.33.32.156-158)",
+    rewards: {
+      hackcoins: 0,
+      experience: 75,
+    },
+    nextMission: "mission_008_rogue_ai",
+  },
+  mission_008_rogue_ai: {
+    id: "mission_008_rogue_ai",
+    title: "Void Echo: Rogue AI",
+    description:
+      "Final piece of the puzzle: An AI entity controls Spamton's security. Void Echo must be neutralized or bypassed.",
+    objective: "Discover all Void Echo nodes (192.0.2.195-197)",
+    rewards: {
+      hackcoins: 0,
+      experience: 75,
+    },
+    nextMission: "mission_009_spamton_located",
+  },
+  mission_009_spamton_located: {
+    id: "mission_009_spamton_located",
+    title: "Spamton Located",
+    description:
+      "All intelligence gathered. HPT has pinpointed Spamton's main headquarters. Final strike authorized.",
+    objective: "Pinpoint Spamton's exact location and extract coordinates",
+    rewards: {
+      hackcoins: 0,
+      experience: 100,
+    },
+    nextMission: "mission_010_spamton_final",
+  },
+  mission_010_spamton_final: {
+    id: "mission_010_spamton_final",
+    title: "Operation: Spamton Elimination",
+    description:
+      "All reconnaissance complete. Execute the final strike. Destroy Spamton's headquarters.",
+    objective: "Destroy Spamton's main server",
+    rewards: {
+      hackcoins: 0,
+      experience: 200,
+    },
+    nextMission: "mission_011_aftermath",
+  },
+  mission_011_aftermath: {
+    id: "mission_011_aftermath",
+    title: "Assess Network Damage",
+    description:
+      "Investigate the aftermath of your attack and assess network consequences.",
+    objective: "Survey faction responses and network stability",
+    rewards: {
+      hackcoins: 0,
+      experience: 150,
+    },
+    nextMission: null, // Story branching based on route
+  },
+};
+
+function initializeMissions() {
+  gameState.currentMissionId = "mission_001_intro";
+  gameState.completedMissions = {};
+  gameState.missionProgress = {};
+}
+
+function getCurrentMission() {
+  return missions[gameState.currentMissionId];
+}
+
+function completeMission(missionId) {
+  gameState.completedMissions[missionId] = true;
+  const mission = missions[missionId];
+  if (mission && mission.nextMission) {
+    gameState.currentMissionId = mission.nextMission;
+    return mission.nextMission;
+  }
+  return null;
+}
+
+// Initialize faction reputation
+function initializeFactions() {
+  Object.keys(factions).forEach((factionId) => {
+    if (!gameState.factionReputation[factionId]) {
+      gameState.factionReputation[factionId] = 0;
+    }
+  });
+}
+
+// PHASE 3: JOBS SYSTEM
+
+// UPGRADE CATALOG (Phase 4)
+const upgradesCatalog = {
+  stronger_attacks: {
+    id: "stronger_attacks",
+    name: "Stronger Attacks",
+    category: "Combat",
+    cost: 150,
+    description: "Double the direct damage dealt per attack.",
+    effect: "hackPointsMultiplier",
+    value: 2,
+  },
+  breach_specialist: {
+    id: "breach_specialist",
+    name: "Breach Specialist",
+    category: "Combat",
+    cost: 120,
+    description: "Gain +3 extra breaches on each protection type.",
+    effect: "breachBonus",
+    value: 3,
+  },
+  defense_expert: {
+    id: "defense_expert",
+    name: "Defense Expert",
+    category: "Combat",
+    cost: 120,
+    description: "Defend 2x as effectively per defense action.",
+    effect: "defenseMultiplier",
+    value: 2,
+  },
+  precision_strike: {
+    id: "precision_strike",
+    name: "Precision Strike",
+    category: "Combat",
+    cost: 100,
+    description: "Attacks ignore 50% of target protection.",
+    effect: "ignoreProtection",
+    value: 0.5,
+  },
+  job_efficiency: {
+    id: "job_efficiency",
+    name: "Job Efficiency",
+    category: "Economy",
+    cost: 100,
+    description: "Earn +50% Maincoins from job completion.",
+    effect: "jobRewardMultiplier",
+    value: 1.5,
+  },
+  hack_master: {
+    id: "hack_master",
+    name: "Hack Master",
+    category: "Economy",
+    cost: 150,
+    description: "Gain +10 Hack Points per attack.",
+    effect: "hackPointsBonus",
+    value: 10,
+  },
+  find_specialist: {
+    id: "find_specialist",
+    name: "Find Specialist",
+    category: "Economy",
+    cost: 80,
+    description: "Discover +5 Find Points per new IP.",
+    effect: "findPointsBonus",
+    value: 5,
+  },
+  currency_trader: {
+    id: "currency_trader",
+    name: "Currency Trader",
+    category: "Economy",
+    cost: 200,
+    description: "Unlock 1:1 Hackcoin ↔ Maincoin conversion.",
+    effect: "unlockCurrencyTrade",
+    value: 1,
+  },
+  network_scanner: {
+    id: "network_scanner",
+    name: "Network Scanner",
+    category: "Utility",
+    cost: 180,
+    description: "Auto-discover 3 random IPs at game start.",
+    effect: "autoDiscoverIPs",
+    value: 3,
+  },
+  router_echo: {
+    id: "router_echo",
+    name: "Router Echo",
+    category: "Utility",
+    cost: 120,
+    description: "Reveal Spamton's IP in the FIND menu.",
+    effect: "revealSpamtonIP",
+    value: 1,
+  },
+  firewall_builder: {
+    id: "firewall_builder",
+    name: "Firewall Builder",
+    category: "Utility",
+    cost: 110,
+    description: "Build defenses instantly (+1 all defense types).",
+    effect: "instantDefense",
+    value: 1,
+  },
+  reputation_monitor: {
+    id: "reputation_monitor",
+    name: "Reputation Monitor",
+    category: "Utility",
+    cost: 140,
+    description: "Attacking factions causes only half reputation loss.",
+    effect: "halfReputationLoss",
+    value: 0.5,
+  },
+};
+
+// NPC DEFINITIONS (Phase 3)
+const npcs = {
+  rogue_hacker: {
+    id: "rogue_hacker",
+    name: "Rogue Hacker",
+    avatar: "🕵️",
+    description: "Underground contractor offering side gigs",
+  },
+  corporate_spy: {
+    id: "corporate_spy",
+    name: "Corporate Spy",
+    avatar: "🕴️",
+    description: "Espionage specialist with lucrative contracts",
+  },
+  network_broker: {
+    id: "network_broker",
+    name: "Network Broker",
+    avatar: "💼",
+    description: "Information dealer with various jobs",
+  },
+  black_market_ai: {
+    id: "black_market_ai",
+    name: "Black Market AI",
+    avatar: "🤖",
+    description: "Automated job system offering computational tasks",
+  },
+};
+
+const dailyJobs = [
+  {
+    id: "job_scan_subnet",
+    npcId: "rogue_hacker",
+    title: "Scan Subnet Range",
+    description: "Probe and catalog unknown subnet (XXX.XXX.0.0/16)",
+    reward: 50, // Maincoins
+    difficulty: "Easy",
+    action: "probe_random", // Action type
+  },
+  {
+    id: "job_break_encryption",
+    npcId: "rogue_hacker",
+    title: "Break Encryption",
+    description: "Bypass 1 encryption barrier on any target",
+    reward: 75,
+    difficulty: "Medium",
+    action: "breach_encryption",
+  },
+  {
+    id: "job_corporate_intel",
+    npcId: "corporate_spy",
+    title: "Corporate Network Intel",
+    description: "Discover all IPs of a corporate faction",
+    reward: 100,
+    difficulty: "Hard",
+    action: "discover_faction",
+  },
+  {
+    id: "job_network_analysis",
+    npcId: "network_broker",
+    title: "Network Analysis",
+    description: "Successfully defend against 5 counterhacks",
+    reward: 60,
+    difficulty: "Medium",
+    action: "survive_counterhacks",
+  },
+  {
+    id: "job_ai_training",
+    npcId: "black_market_ai",
+    title: "Computational Task",
+    description: "Complete any 3 attacks in one session",
+    reward: 80,
+    difficulty: "Medium",
+    action: "multiple_attacks",
+  },
+  {
+    id: "job_dns_hijack",
+    npcId: "rogue_hacker",
+    title: "DNS Hijacking",
+    description: "Discover 5 or more new IP signatures",
+    reward: 120,
+    difficulty: "Hard",
+    action: "discover_ips",
+  },
+  {
+    id: "job_firewall_breach",
+    npcId: "corporate_spy",
+    title: "Firewall Architecture",
+    description:
+      "Breach all 3 protection types (encryption, tracking, monitoring)",
+    reward: 150,
+    difficulty: "Hard",
+    action: "breach_all_types",
+  },
+  {
+    id: "job_build_defense",
+    npcId: "network_broker",
+    title: "Defense Infrastructure",
+    description: "Build 5 defensive systems",
+    reward: 70,
+    difficulty: "Medium",
+    action: "build_defenses",
+  },
+];
+
+function initializeJobs() {
+  refreshDailyJobs();
+}
+
+function refreshDailyJobs() {
+  const today = new Date().toDateString();
+  gameState.lastJobRefresh = today;
+  gameState.jobsRefreshedToday = true;
+
+  // Randomly select 4 jobs from available jobs
+  const shuffled = [...dailyJobs].sort(() => Math.random() - 0.5);
+  gameState.availableJobs = {};
+
+  for (let i = 0; i < Math.min(4, shuffled.length); i++) {
+    const job = shuffled[i];
+    gameState.availableJobs[job.id] = {
+      ...job,
+      completed: false,
+      progress: 0,
+    };
+  }
+}
+
+function completeJob(jobId) {
+  const job = gameState.availableJobs[jobId];
+  if (!job) return false;
+  if (job.completed) return false; // Prevent double completion
+
+  gameState.availableJobs[jobId].completed = true;
+  gameState.completedJobs[jobId] = true;
+
+  // Calculate tier bonus (highest tier across all factions)
+  let maxTierBonus = 1.0;
+  for (const [factionId, rep] of Object.entries(gameState.factionReputation)) {
+    const tier = getTierFromReputation(rep);
+    if (tier.tier >= 3) {
+      // Elite (tier 3) or Legendary (tier 4)
+      if (tier.tier === 4) {
+        // Legendary
+        maxTierBonus = 2.0;
+        break; // Highest possible, stop searching
+      } else if (tier.tier === 3 && maxTierBonus < 1.5) {
+        // Elite
+        maxTierBonus = 1.5;
+      }
+    }
+  }
+
+  let finalReward = Math.floor(job.reward * maxTierBonus);
+
+  // Award Maincoins
+  addCurrency("maincoins", finalReward);
+  displayCurrencies();
+
+  addHackLog(`✓ Job completed: ${job.title}`, "success");
+
+  if (maxTierBonus > 1.0) {
+    const tierName = maxTierBonus === 2.0 ? "Legendary" : "Elite";
+    addHackLog(
+      `✓ Earned ${finalReward} Maincoins (${tierName} tier bonus: +${Math.round((maxTierBonus - 1) * 100)}%)`,
+      "success",
+    );
+  } else {
+    addHackLog(`✓ Earned ${finalReward} Maincoins`, "success");
+  }
+
+  return true;
+}
+
+function getAvailableJobs() {
+  return Object.values(gameState.availableJobs);
+}
+
+// UPGRADE UTILITIES (Phase 4)
+function hasUpgrade(upgradeId) {
+  return gameState.upgrades[upgradeId] === true;
+}
+
+function purchaseUpgrade(upgradeId) {
+  const upgrade = upgradesCatalog[upgradeId];
+  if (!upgrade) return { success: false, message: "Upgrade not found." };
+  if (hasUpgrade(upgradeId))
+    return { success: false, message: "Already purchased." };
+  if (gameState.currencies.maincoins < upgrade.cost) {
+    return {
+      success: false,
+      message: `Need ${upgrade.cost} Maincoins (have ${gameState.currencies.maincoins}).`,
+    };
+  }
+
+  gameState.currencies.maincoins -= upgrade.cost;
+  gameState.upgrades[upgradeId] = true;
+  displayCurrencies();
+
+  addHackLog(`✓ Upgrade purchased: ${upgrade.name}`, "success");
+  addHackLog(`✓ Effect: ${upgrade.description}`, "success");
+
+  return { success: true, message: `${upgrade.name} unlocked!` };
+}
+
+function getUpgradesByCategory(category) {
+  return Object.values(upgradesCatalog).filter((u) => u.category === category);
+}
+
+function displayUpgradesPanel() {
+  const panel = document.getElementById("upgrades-content");
+  if (!panel) return;
+
+  const categories = ["Combat", "Economy", "Utility"];
+  let html = `<div style="color: #00cc00; margin-bottom: 15px; font-size: 0.9em;">💰 Maincoins: ${gameState.currencies.maincoins}</div>`;
+
+  categories.forEach((cat) => {
+    const upgrades = getUpgradesByCategory(cat);
+    html += `<div style="margin-bottom: 20px;">`;
+    html += `<div style="color: #ffaa00; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ffaa00; padding-bottom: 5px;">${cat} Upgrades</div>`;
+
+    upgrades.forEach((upgrade) => {
+      const purchased = hasUpgrade(upgrade.id);
+      const statusColor = purchased ? "#00aa00" : "#cccccc";
+      const statusText = purchased ? "✓ OWNED" : "○ AVAILABLE";
+      const btnDisabled =
+        purchased || gameState.currencies.maincoins < upgrade.cost;
+      const btnStyle = purchased
+        ? "background: #0a3a0a; border: 1px solid #00aa00; color: #00aa00; cursor: not-allowed; opacity: 0.6;"
+        : btnDisabled
+          ? "background: #3a0a0a; border: 1px solid #aa0000; color: #aa0000; cursor: not-allowed; opacity: 0.6;"
+          : "background: #0a3a0a; border: 1px solid #00ff00; color: #00ff00; cursor: pointer;";
+
+      html += `
+        <div style="background: rgba(50, 50, 100, 0.4); border: 1px solid #444; padding: 10px; margin-bottom: 8px; border-radius: 3px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <div style="font-weight: bold; color: #ddd;">${upgrade.name}</div>
+            <div style="color: ${statusColor}; font-size: 11px;">${statusText}</div>
+          </div>
+          <div style="color: #aaa; font-size: 12px; margin-bottom: 8px;">${upgrade.description}</div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="color: #ffaa00;">💰 ${upgrade.cost} MC</div>
+            ${!purchased ? `<button class="upgrade-btn" data-upgrade="${upgrade.id}" style="${btnStyle} padding: 4px 8px; font-family: monospace; font-size: 10px; border-radius: 2px; transition: all 0.2s;" ${btnDisabled ? "disabled" : ""}>BUY</button>` : ""}
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  });
+
+  panel.innerHTML = html;
+
+  // Wire up purchase buttons
+  document.querySelectorAll(".upgrade-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const upgradeId = e.target.dataset.upgrade;
+      const result = purchaseUpgrade(upgradeId);
+      if (result.success) {
+        displayUpgradesPanel(); // Refresh
+      } else {
+        addHackLog(result.message, "warning");
+      }
+    });
+  });
+}
+
+// CURRENCY UTILITIES
+function addCurrency(type, amount) {
+  if (gameState.currencies[type] !== undefined) {
+    gameState.currencies[type] += amount;
+  }
+}
+
+function convertSectionToHackcoins(sectionType, amount) {
+  if (gameState.currencies[sectionType] >= amount) {
+    gameState.currencies[sectionType] -= amount;
+    gameState.currencies.hackcoins += amount * 0.8; // Small loss on conversion
+    return true;
+  }
+  return false;
+}
+
+function convertHackcoinsToMaincoins(amount) {
+  // Only possible if DWConverter is unlocked (placeholder)
+  if (gameState.currencies.hackcoins >= amount) {
+    gameState.currencies.hackcoins -= amount;
+    gameState.currencies.maincoins += amount * 0.9; // Small loss on conversion
+    return true;
+  }
+  return false;
+}
+
+// ROUTE DETECTION & TRACKING
+function getFactionForIP(ip) {
+  for (const [factionId, faction] of Object.entries(factions)) {
+    if (faction.ips && faction.ips.includes(ip)) {
+      return factionId;
+    }
+  }
+  return null;
+}
+
+function updateRoute(attackedFactionId) {
+  if (gameState.routeLocked) return;
+
+  if (attackedFactionId === "spamton") {
+    return; // Attacking Spamton doesn't lock route
+  }
+
+  // First non-Spamton attack determines route
+  const factionInfo = factions[attackedFactionId];
+  if (!factionInfo) return;
+
+  // If attacking a non-hackable faction for current route, force route change
+  if (!factionInfo.hackableRoutes.includes(gameState.currentRoute)) {
+    gameState.currentRoute = "brutal";
+  } else if (gameState.currentRoute === "pacifist") {
+    gameState.currentRoute = "brutal";
+  }
+
+  gameState.routeLocked = true;
+  gameState.attackedTargets[attackedFactionId] = true;
+
+  // Route is hidden - no visible notification
+  // Player discovers route through their choices
+}
+
+function updateFactionReputation(factionId, change) {
+  if (gameState.factionReputation[factionId] !== undefined) {
+    gameState.factionReputation[factionId] += change;
+  }
+}
+
+// REPUTATION TIER SYSTEM (Phase 5)
+const reputationTiers = [
+  {
+    tier: 0,
+    name: "Neutral",
+    minRep: 0,
+    maxRep: 20,
+    bonus: 0,
+    description: "No effect",
+  },
+  {
+    tier: 1,
+    name: "Associate",
+    minRep: 21,
+    maxRep: 50,
+    bonus: 5,
+    description: "5% stronger attacks",
+  },
+  {
+    tier: 2,
+    name: "Trusted",
+    minRep: 51,
+    maxRep: 100,
+    bonus: 10,
+    description: "10% stronger + discount",
+  },
+  {
+    tier: 3,
+    name: "Elite",
+    minRep: 101,
+    maxRep: 150,
+    bonus: 15,
+    description: "15% stronger + 2x jobs",
+  },
+  {
+    tier: 4,
+    name: "Legendary",
+    minRep: 151,
+    maxRep: Infinity,
+    bonus: 20,
+    description: "20% stronger + exclusive",
+  },
+];
+
+function getTierFromReputation(repValue) {
+  return (
+    reputationTiers.find((t) => repValue >= t.minRep && repValue <= t.maxRep) ||
+    reputationTiers[0]
+  );
+}
+
+function getTierBonus(factionId) {
+  const rep = gameState.factionReputation[factionId] || 0;
+  const tier = getTierFromReputation(rep);
+  return tier.bonus / 100; // Return as decimal (0.05 for 5%)
+}
+
+function getProgressToNextTier(repValue) {
+  const currentTier = getTierFromReputation(repValue);
+  if (currentTier.tier >= 4) return { current: 100, next: 100, percent: 100 }; // Maxed
+  const nextTier = reputationTiers[currentTier.tier + 1];
+  const currentProgress = Math.max(0, repValue - currentTier.minRep);
+  const nextProgress = nextTier.minRep - currentTier.minRep;
+  const percent = Math.min(
+    100,
+    Math.round((currentProgress / nextProgress) * 100),
+  );
+  return { current: currentProgress, next: nextProgress, percent };
+}
+
+// SAVE SYSTEM
+function saveGame(slotNumber) {
+  if (slotNumber < 0 || slotNumber > 4) return false;
+
+  const saveData = JSON.parse(JSON.stringify(gameState));
+  gameState.saveSlots[slotNumber] = {
+    gameState: saveData,
+    timestamp: new Date().toISOString(),
+  };
+
+  // Persist to localStorage
+  localStorage.setItem(
+    `hackulean_save_${slotNumber}`,
+    JSON.stringify(gameState.saveSlots[slotNumber]),
+  );
+  addHackLog(`✓ Game saved to slot ${slotNumber + 1}`, "success");
+  return true;
+}
+
+function loadGame(slotNumber) {
+  if (slotNumber < 0 || slotNumber > 4) return false;
+
+  const saveData =
+    gameState.saveSlots[slotNumber] ||
+    JSON.parse(localStorage.getItem(`hackulean_save_${slotNumber}`) || "null");
+
+  if (!saveData || !saveData.gameState) {
+    addProbeLog("⚠️ Empty save slot", "warning");
+    return false;
+  }
+
+  // Restore game state
+  const restored = saveData.gameState;
+  Object.assign(gameState, restored);
+
+  updateHPTDisplay();
+  updateDefensesList();
+  displaySignatures();
+  updateStatusMessage(`✓ Loaded save slot ${slotNumber + 1}`);
+  addProbeLog(`✓ Game loaded from slot ${slotNumber + 1}`, "success");
+  return true;
+}
+
+function autoSave() {
+  const saveData = JSON.parse(JSON.stringify(gameState));
+  gameState.autoSave = {
+    gameState: saveData,
+    timestamp: new Date().toISOString(),
+  };
+  localStorage.setItem(
+    "hackulean_autosave",
+    JSON.stringify(gameState.autoSave),
+  );
+}
+
+function loadAutoSave() {
+  const autoSave = JSON.parse(
+    localStorage.getItem("hackulean_autosave") || "null",
+  );
+  if (autoSave && autoSave.gameState) {
+    Object.assign(gameState, autoSave.gameState);
+    updateHPTDisplay();
+    updateDefensesList();
+    displaySignatures();
+    updateStatusMessage("✓ Auto-save loaded");
+    return true;
+  }
+  return false;
+}
+
+// CURRENCY DISPLAY
+function displayCurrencies() {
+  const currencies = gameState.currencies;
+  let currencyText = "💰 CURRENCIES: ";
+  currencyText += `FP:${currencies.findPoints}🔍 `;
+  currencyText += `HP:${currencies.hackPoints}🔐 `;
+  currencyText += `BP:${currencies.breachPoints}⚔️ `;
+  currencyText += `DP:${currencies.defendPoints}🛡️ `;
+  currencyText += `HC:${Math.floor(currencies.hackcoins)}💳 `;
+  currencyText += `MC:${Math.floor(currencies.maincoins)}💵`;
+
+  let currencyDiv = document.getElementById("currency-display");
+  if (!currencyDiv) {
+    currencyDiv = document.createElement("div");
+    currencyDiv.id = "currency-display";
+    currencyDiv.style.cssText =
+      "background: #0a0a0a; border: 1px solid #00ff00; padding: 8px; margin: 8px 0; font-size: 12px; font-family: monospace; color: #00ff00;";
+    const statusDiv = document.getElementById("status");
+    if (statusDiv && statusDiv.parentNode) {
+      statusDiv.parentNode.insertBefore(currencyDiv, statusDiv);
+    }
+  }
+  currencyDiv.textContent = currencyText;
+}
+
+// MISSION DISPLAY
+function displayMissionObjective() {
+  const mission = getCurrentMission();
+  if (!mission) return;
+
+  let missionDiv = document.getElementById("mission-display");
+  if (!missionDiv) {
+    missionDiv = document.createElement("div");
+    missionDiv.id = "mission-display";
+    missionDiv.style.cssText =
+      "background: #0a0a0a; border: 1px solid #ffaa00; padding: 8px; margin: 8px 0; font-size: 12px; font-family: monospace; color: #ffaa00;";
+    const statusDiv = document.getElementById("status");
+    if (statusDiv && statusDiv.parentNode) {
+      statusDiv.parentNode.insertBefore(missionDiv, statusDiv);
+    }
+  }
+
+  const missionText = `📋 MISSION: ${mission.title} - ${mission.objective}`;
+  missionDiv.textContent = missionText;
+}
+
+// MISSIONS UI
+function displayMissionsPanel() {
+  const missionsContent = document.getElementById("missions-content");
+  const mission = getCurrentMission();
+
+  if (!mission) {
+    missionsContent.innerHTML = "<p>No active mission</p>";
+    return;
+  }
+
+  let html = `
+    <div style="border: 1px solid #ffaa00; padding: 10px; margin-bottom: 10px; background: rgba(255, 170, 0, 0.05);">
+      <div style="font-weight: bold; margin-bottom: 5px;">📋 ${mission.title}</div>
+      <div style="color: #cccccc; font-size: 12px; margin-bottom: 8px;">${mission.description}</div>
+      <div style="color: #ffaa00; margin-bottom: 5px;">Objective: ${mission.objective}</div>
+  `;
+
+  // Show completed missions
+  Object.keys(gameState.completedMissions).forEach((missionId) => {
+    const completedMission = missions[missionId];
+    if (completedMission) {
+      html += `<div style="color: #00aa00; margin-top: 5px;">✓ ${completedMission.title}</div>`;
+    }
+  });
+
+  html += `</div>`;
+  missionsContent.innerHTML = html;
+}
+
+// FACTIONS UI
+function displayFactionsPanel() {
+  const factionsContent = document.getElementById("factions-content");
+  let html = "";
+  let discoveredCount = 0;
+
+  Object.entries(factions).forEach(([factionId, faction]) => {
+    // Check if all IPs for this faction are discovered
+    const allIPsDiscovered = faction.ips.every(
+      (ip) => gameState.discoveredIPs[ip] !== undefined,
+    );
+
+    if (allIPsDiscovered) {
+      discoveredCount++;
+      const repValue = gameState.factionReputation[factionId] || 0;
+      const tier = getTierFromReputation(repValue);
+      const progress = getProgressToNextTier(repValue);
+      const bonusPercent = tier.bonus;
+
+      // Tier badge colors
+      const tierColors = {
+        0: "#888888", // Neutral - gray
+        1: "#4488ff", // Associate - blue
+        2: "#00ff00", // Trusted - green
+        3: "#ffaa00", // Elite - gold
+        4: "#ff00ff", // Legendary - magenta
+      };
+      const tierColor = tierColors[tier.tier] || "#888888";
+
+      // Star rating for visual tier indicator
+      const starRating = "⭐".repeat(tier.tier + 1);
+
+      html += `
+        <div style="border: 2px solid ${tierColor}; padding: 10px; margin-bottom: 10px; background: rgba(0, 255, 0, 0.05);">
+          <div style="font-weight: bold; margin-bottom: 5px;">🌐 ${faction.name}</div>
+          <div style="color: #888888; font-size: 11px; margin-bottom: 5px;">Type: ${faction.type}</div>
+          <div style="color: #cccccc; font-size: 11px; margin-bottom: 8px;">IPs: ${faction.ips.join(", ")}</div>
+          <div style="color: ${tierColor}; font-weight: bold; margin-bottom: 5px;">${starRating} ${tier.name} (${bonusPercent}% bonus)</div>
+          <div style="margin-bottom: 5px;">
+            <div style="color: #888888; font-size: 10px; margin-bottom: 2px;">Reputation: ${repValue}</div>
+            <div style="background: #333333; border: 1px solid #555555; height: 8px; border-radius: 2px; overflow: hidden;">
+              <div style="background: linear-gradient(to right, #00ff00, #ffaa00); height: 100%; width: ${progress.percent}%; transition: width 0.3s ease;"></div>
+            </div>
+            <div style="color: #888888; font-size: 10px; margin-top: 2px;">Next tier: ${progress.current}/${progress.next} rep</div>
+          </div>
+      `;
+
+      if (faction.allies && faction.allies.length > 0) {
+        const allyNames = faction.allies
+          .map((id) => (factions[id] ? factions[id].name : id))
+          .join(", ");
+        html += `<div style="color: #ffaa00; font-size: 11px; margin-top: 5px;">Allies: ${allyNames}</div>`;
+      }
+
+      html += `</div>`;
+    }
+  });
+
+  if (discoveredCount === 0) {
+    html =
+      "<p style='color: #888888;'>Discover all IPs of a faction to add them to your network profile...</p>";
+  } else {
+    html =
+      `<p style='color: #00ff00; margin-bottom: 10px;'>📊 ${discoveredCount}/${Object.keys(factions).length} factions discovered</p>` +
+      html;
+  }
+
+  factionsContent.innerHTML = html;
+}
+
+// JOBS PANEL (Phase 3)
+function displayJobsPanel() {
+  const jobsContent = document.getElementById("jobs-content");
+  if (!jobsContent) {
+    console.error("jobs-content element not found");
+    return;
+  }
+
+  const jobs = getAvailableJobs();
+
+  if (!jobs || jobs.length === 0) {
+    jobsContent.innerHTML =
+      "<p style='color: #888888;'>No jobs available. Check back later!</p>";
+    return;
+  }
+
+  let html = `<p style='color: #00cc00; margin-bottom: 15px;'>📊 ${Object.values(gameState.completedJobs).length} jobs completed</p>`;
+
+  jobs.forEach((job) => {
+    const npc = npcs[job.npcId];
+    if (!npc) {
+      console.error(`NPC not found for job ${job.id}: ${job.npcId}`);
+      return; // Skip this job if NPC doesn't exist
+    }
+    const statusColor = job.completed ? "#00aa00" : "#ffaa00";
+    const statusText = job.completed ? "✓ COMPLETED" : "○ AVAILABLE";
+
+    html += `
+      <div style="border: 1px solid #cccccc; padding: 10px; margin-bottom: 10px; background: rgba(200, 200, 200, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+          <div style="font-weight: bold;">${npc.avatar} ${job.title}</div>
+          <div style="color: ${statusColor}; font-weight: bold; font-size: 11px;">${statusText}</div>
+        </div>
+        <div style="color: #888888; font-size: 11px; margin-bottom: 5px;">From: ${npc.name}</div>
+        <div style="color: #cccccc; font-size: 12px; margin-bottom: 8px;">${job.description}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="color: #ffaa00;">💰 ${job.reward} Maincoins</div>
+          <div style="color: #666666; font-size: 11px;">Difficulty: ${job.difficulty}</div>
+          ${!job.completed ? `<button class="job-complete-btn" data-job-id="${job.id}" style="background: #0a3a0a; border: 1px solid #00ff00; color: #00ff00; padding: 4px 8px; cursor: pointer; font-family: monospace; font-size: 10px;">COMPLETE</button>` : ""}
+        </div>
+      </div>
+    `;
+  });
+
+  jobsContent.innerHTML = html;
+
+  // Wire up complete buttons
+  document.querySelectorAll(".job-complete-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const jobId = e.target.dataset.jobId;
+      completeJob(jobId);
+      displayJobsPanel(); // Refresh
+    });
+  });
+}
+
+function showSaveScreen() {
+  // Create overlay
+  const overlay = document.createElement("div");
+  overlay.id = "save-screen-overlay";
+  overlay.style.position = "fixed";
+  overlay.style.left = "0";
+  overlay.style.top = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+  overlay.style.background = "rgba(0, 0, 0, 0.8)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.zIndex = "9999";
+  overlay.style.fontFamily = "monospace";
+
+  const box = document.createElement("div");
+  box.style.background = "#0a0a0a";
+  box.style.border = "2px solid #00ff00";
+  box.style.padding = "20px";
+  box.style.maxWidth = "600px";
+  box.style.maxHeight = "80vh";
+  box.style.overflow = "auto";
+  box.style.color = "#00ff00";
+  box.style.fontSize = "14px";
+
+  let html = `
+    <div style="margin-bottom: 15px;">
+      <h2 style="margin: 0 0 10px 0; border-bottom: 1px solid #00ff00; padding-bottom: 5px;">
+        💾 SAVE/LOAD SYSTEM
+      </h2>
+    </div>
+  `;
+
+  // Generate save slots
+  for (let i = 0; i < 5; i++) {
+    const saveData =
+      gameState.saveSlots[i] ||
+      JSON.parse(localStorage.getItem(`hackulean_save_${i}`) || "null");
+    const hasData = saveData && saveData.gameState;
+    const timestamp = hasData
+      ? new Date(saveData.timestamp).toLocaleString()
+      : "Empty";
+    const statusText = hasData ? "✓ OCCUPIED" : "● EMPTY";
+    const statusColor = hasData ? "#00ff00" : "#666666";
+
+    html += `
+      <div style="border: 1px solid #00ff00; padding: 10px; margin-bottom: 10px; background: rgba(0, 255, 0, 0.05);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span>SLOT ${i + 1}</span>
+          <span style="color: ${statusColor};">${statusText}</span>
+        </div>
+        <div style="color: #888888; font-size: 12px; margin-bottom: 8px;">
+          ${timestamp}
+        </div>
+        <div style="display: flex; gap: 5px;">
+          <button class="save-slot-btn" data-slot="${i}" data-action="save" style="
+            background: #0a3a0a; border: 1px solid #00ff00; color: #00ff00; padding: 5px 10px; cursor: pointer; font-family: monospace;
+          ">SAVE</button>
+          <button class="save-slot-btn" data-slot="${i}" data-action="load" style="
+            background: #0a3a0a; border: 1px solid #00ff00; color: #00ff00; padding: 5px 10px; cursor: pointer; font-family: monospace;
+          " ${!hasData ? "disabled" : ""}>LOAD</button>
+          <button class="save-slot-btn" data-slot="${i}" data-action="delete" style="
+            background: #3a0a0a; border: 1px solid #ff4444; color: #ff4444; padding: 5px 10px; cursor: pointer; font-family: monospace;
+          " ${!hasData ? "disabled" : ""}>DELETE</button>
+        </div>
+      </div>
+    `;
+  }
+
+  html += `
+    <div style="margin-top: 15px; text-align: center;">
+      <button id="close-save-screen" style="
+        background: #0a0a0a; border: 1px solid #00ff00; color: #00ff00; padding: 8px 15px; cursor: pointer; font-family: monospace;
+      ">CLOSE</button>
+    </div>
+  `;
+
+  box.innerHTML = html;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  // Cleanup function
+  function cleanup() {
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
+  }
+
+  // Close button
+  document
+    .getElementById("close-save-screen")
+    .addEventListener("click", cleanup);
+
+  // Save/Load/Delete buttons
+  document.querySelectorAll(".save-slot-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const slot = parseInt(e.target.dataset.slot, 10);
+      const action = e.target.dataset.action;
+
+      if (action === "save") {
+        saveGame(slot);
+        cleanup();
+        showSaveScreen(); // Refresh to show updated slot
+      } else if (action === "load") {
+        if (loadGame(slot)) {
+          cleanup();
+        }
+      } else if (action === "delete") {
+        gameState.saveSlots[slot] = null;
+        localStorage.removeItem(`hackulean_save_${slot}`);
+        addProbeLog(`✓ Slot ${slot + 1} deleted`, "info");
+        cleanup();
+        showSaveScreen(); // Refresh
+      }
+    });
+  });
+
+  // Close on overlay click
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) cleanup();
+  });
+}
 
 function getRandomSpamtonIP() {
   const possibleIPs = [
@@ -249,6 +1432,17 @@ function switchMenu(e) {
     section.classList.remove("active");
   });
   document.getElementById(`${menuName}-menu`).classList.add("active");
+
+  // Update content for specific menus
+  if (menuName === "missions") {
+    displayMissionsPanel();
+  } else if (menuName === "factions") {
+    displayFactionsPanel();
+  } else if (menuName === "jobs") {
+    displayJobsPanel();
+  } else if (menuName === "upgrades") {
+    displayUpgradesPanel();
+  }
 }
 
 // FIND MENU FUNCTIONS
@@ -305,6 +1499,8 @@ function probeIP() {
     if (foundIP) {
       if (!gameState.discoveredIPs[ip]) {
         gameState.discoveredIPs[ip] = foundIP;
+        addCurrency("findPoints", 10); // Earn for discovering IP
+        displayCurrencies();
         displaySignatures();
       }
 
@@ -455,6 +1651,12 @@ function displaySignatures() {
 
     list.appendChild(entry);
   });
+
+  // Update factions panel if visible
+  const factionsMenu = document.getElementById("factions-menu");
+  if (factionsMenu && factionsMenu.classList.contains("active")) {
+    displayFactionsPanel();
+  }
 }
 
 function addProbeLog(message, type = "info") {
@@ -652,7 +1854,42 @@ function executeAttack(ip, attack, attackType) {
   });
 
   setTimeout(() => {
-    applyDamageToTarget(ip, attack.damage);
+    // Apply tier bonus damage if attacking a faction
+    let damageToApply = attack.damage;
+    let damageBonus = 0;
+    let bonusMsg = "";
+
+    // Find which faction this IP belongs to
+    let targetFactionId = null;
+    for (const [factionId, faction] of Object.entries(factions)) {
+      if (faction.ips && faction.ips.includes(ip)) {
+        targetFactionId = factionId;
+        break;
+      }
+    }
+
+    // Apply tier bonus if this is a faction IP
+    if (targetFactionId) {
+      const tierBonus = getTierBonus(targetFactionId);
+      damageBonus = Math.floor(attack.damage * tierBonus);
+      damageToApply = attack.damage + damageBonus;
+
+      if (damageBonus > 0) {
+        const tier = getTierFromReputation(
+          gameState.factionReputation[targetFactionId] || 0,
+        );
+        bonusMsg = `🚀 ${tier.name} bonus applied! (+${damageBonus} damage, +${Math.round(tierBonus * 100)}%)`;
+      }
+    }
+
+    applyDamageToTarget(ip, damageToApply);
+    addCurrency("hackPoints", 5); // Earn points for hack attempt
+
+    if (bonusMsg) {
+      addHackLog(bonusMsg, "success");
+    }
+
+    displayCurrencies();
     updateTargetDisplay(ip);
 
     setTimeout(() => {
@@ -837,6 +2074,21 @@ function updateTargetDisplay(ip) {
 
   // Check win/loss conditions
   if (health <= 0) {
+    // FACTION INTEGRATION - Track which faction was attacked
+    const attackedFactionId = getFactionForIP(ip);
+    if (attackedFactionId && attackedFactionId !== "spamton") {
+      updateRoute(attackedFactionId);
+      updateFactionReputation(attackedFactionId, -10); // Reputation hit for attacking
+
+      // If faction has allies, they hear about it
+      const factionInfo = factions[attackedFactionId];
+      if (factionInfo && factionInfo.allies) {
+        factionInfo.allies.forEach((allyId) => {
+          updateFactionReputation(allyId, -5); // Allies get smaller rep hit
+        });
+      }
+    }
+
     // Special dev-server behavior: unlocking developer tools instead of loss
     if (ip === "THE.GAME") {
       addHackLog(
@@ -1030,6 +2282,8 @@ function buildDefense(e) {
 
   setTimeout(() => {
     gameState.defenses[defenseType]++;
+    addCurrency("defendPoints", 8); // Earn for building defense
+    displayCurrencies();
     updateDefensesList();
 
     addDefenseLog(`✓ ${defense.name} +1 active`, "success");
@@ -1105,6 +2359,8 @@ function useBreach(e) {
 
   setTimeout(() => {
     gameState.breaches[breachType]++;
+    addCurrency("breachPoints", 15); // Earn for successful breach
+    displayCurrencies();
     const totalBreaches = Object.values(gameState.breaches).reduce(
       (a, b) => a + b,
       0,
@@ -1494,6 +2750,10 @@ function addBreachLog(message, type = "info") {
 function handleVictory() {
   gameState.isGameOver = true;
   disableHackButtons();
+  autoSave();
+
+  // Complete current mission
+  const nextMissionId = completeMission(gameState.currentMissionId);
 
   document.querySelector(".container").classList.add("victory");
   updateStatusMessage("🎉 VICTORY! SPAMTON'S HEADQUARTERS DESTROYED! 🎉");
@@ -1505,11 +2765,29 @@ function handleVictory() {
   addHackLog("✓ INTERNET SECURED", "success");
   addHackLog("✓ HPT VICTORIOUS", "success");
   addHackLog("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓", "success");
+
+  // Show route-based hints (without revealing the route)
+  if (gameState.routeLocked) {
+    if (gameState.currentRoute === "pacifist") {
+      addHackLog("", "warning");
+      addHackLog(
+        "✓ Your restraint earned respect from the underground.",
+        "info",
+      );
+    } else if (gameState.currentRoute === "brutal") {
+      addHackLog("", "warning");
+      addHackLog("✗ The network trembles at your ruthlessness.", "warning");
+    } else {
+      addHackLog("", "warning");
+      addHackLog("✓ Your actions have rippled through the network.", "info");
+    }
+  }
 }
 
 function handleLoss(reason) {
   gameState.isGameOver = true;
   disableHackButtons();
+  autoSave();
 
   document.querySelector(".container").classList.add("defeat");
   updateStatusMessage("❌ MISSION FAILED: " + reason);
@@ -1523,6 +2801,7 @@ function handleLoss(reason) {
 
 function updateStatusMessage(message) {
   document.getElementById("status-message").textContent = message;
+  displayCurrencies();
 }
 
 function resetGame() {
@@ -1579,10 +2858,16 @@ function resetGame() {
 }
 
 document.getElementById("reset-btn").addEventListener("click", resetGame);
+document.getElementById("save-btn").addEventListener("click", showSaveScreen);
 
 // Initialize
 function initializeGame() {
   initializeSpamtonIP();
+  initializeFactions();
+  initializeMissions();
+  initializeJobs();
+  displayCurrencies();
+  displayMissionObjective();
   updateHPTDisplay();
   updateDefensesList();
   updateBreachesList();
@@ -1602,7 +2887,7 @@ function initializeGame() {
   addDefenseLog("> Build defenses to survive counterhacks", "info");
 
   updateStatusMessage(
-    "Mission briefing: Locate and defeat Spamton (location randomized)",
+    "HPT MISSION CONTROL: Begin network reconnaissance. Start probing faction networks.",
   );
 }
 
@@ -1610,4 +2895,13 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeGame);
 } else {
   initializeGame();
+}
+
+function initializeGamee() {
+  initializeJobs();
+  displayJobsPanell();
+}
+const dailyJobss = "error";
+function displayJobsPanell() {
+  initializeJobs();
 }

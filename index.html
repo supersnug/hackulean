@@ -26,6 +26,13 @@
         <button class="menu-btn" data-menu="hack">⚔️ HACK</button>
         <button class="menu-btn" data-menu="breach">🔓 BREACH</button>
         <button class="menu-btn" data-menu="defense">🛡️ DEFENSE</button>
+        <button class="menu-btn" data-menu="missions">📋 MISSIONS</button>
+        <button class="menu-btn" data-menu="factions">🌐 FACTIONS</button>
+        <button class="menu-btn" data-menu="jobs">💼 JOBS</button>
+        <button class="menu-btn" data-menu="upgrades">⚙️ UPGRADES</button>
+        <button id="save-btn" class="menu-btn" style="margin-left: auto">
+          💾 SAVE/LOAD
+        </button>
       </div>
 
       <div class="main-content">
@@ -197,6 +204,46 @@
           <div class="log-section">
             <h3>DEFENSE LOG</h3>
             <div id="defense-log-output" class="log-output"></div>
+          </div>
+        </div>
+
+        <!-- MISSIONS MENU -->
+        <div id="missions-menu" class="menu-section">
+          <div class="section-title">MISSION BRIEFING</div>
+          <div id="missions-content" class="missions-content">
+            <p>Loading missions...</p>
+          </div>
+        </div>
+
+        <!-- FACTIONS MENU -->
+        <div id="factions-menu" class="menu-section">
+          <div class="section-title">NETWORK FACTIONS</div>
+          <div id="factions-content" class="factions-content">
+            <p style="color: #888888">
+              Discover faction IPs to add them to your network profile...
+            </p>
+          </div>
+        </div>
+
+        <!-- JOBS MENU -->
+        <div id="jobs-menu" class="menu-section">
+          <div class="section-title">AVAILABLE JOBS</div>
+          <div style="margin-bottom: 15px; color: #888888; font-size: 12px">
+            💼 Side gigs from network contacts. Complete jobs to earn Maincoins.
+          </div>
+          <div id="jobs-content" class="jobs-content">
+            <p>Loading available jobs...</p>
+          </div>
+        </div>
+
+        <div id="upgrades-menu" class="menu-section">
+          <div class="section-title">UPGRADE SHOP</div>
+          <div style="margin-bottom: 15px; color: #888888; font-size: 12px">
+            ⚙️ Permanent upgrades to boost your hacking capabilities. One-time
+            purchase.
+          </div>
+          <div id="upgrades-content" class="upgrades-content">
+            <p>Loading upgrades...</p>
           </div>
         </div>
       </div>
