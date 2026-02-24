@@ -119,6 +119,7 @@ header {
 
 .menu-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 20px;
   border-bottom: 2px solid #00ff00;

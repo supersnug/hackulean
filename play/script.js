@@ -3,6 +3,8 @@ const gameState = {
   hptHealth: 100,
   hptMaxHealth: 100,
   isHacking: false,
+  lastAttackTime: 0, // Timestamp of last attack for cooldown
+  attackCooldown: 1000, // Milliseconds between attacks
   isProbing: false,
   isGameOver: false,
   correctIP: null, // Randomized on init
@@ -53,11 +55,30 @@ const gameState = {
   completedMissions: {}, // Track completed missions
   missionProgress: {}, // Track progress on objectives
 
-  // JOBS SYSTEM (Phase 3)
-  availableJobs: {}, // Active jobs from NPCs
-  completedJobs: {}, // Completed jobs history
+  // JOBS SYSTEM (Phase 3) - Legitimate Jobs (Maincoins)
+  availableJobs: {}, // Active legitimate jobs
+  jobStartTimes: {}, // Track when each job was started: { jobId: timestamp }
+  jobFocusTimes: {}, // Track total focused time on job: { jobId: ms }
+  activeJobId: null, // Currently open job modal (null if no modal open)
+  completedJobs: {}, // Completed legitimate jobs history
   lastJobRefresh: null, // Timestamp of last daily refresh
   jobsRefreshedToday: false, // Has job list been refreshed today
+
+  // DARKNET JOBS - Criminal/Hacking Jobs (Hackcoins)
+  availableDarknetJobs: {}, // Active darknet jobs
+  completedDarknetJobs: {}, // Completed darknet jobs history
+  lastDarknetRefresh: null, // Timestamp of last darknet refresh
+  darknetRefreshedToday: false, // Has darknet job list been refreshed today
+
+  // JOB PROGRESS TRACKING (Phase 3)
+  jobProgress: {
+    probesAttempted: 0,
+    breachesPerformed: 0, // Track encryption/tracking/monitoring breaches
+    ipDiscoveries: 0,
+    attacksCompleted: 0,
+    defenses: 0,
+    counterhacksDefended: 0,
+  },
 
   // UPGRADES SYSTEM (Phase 4)
   upgrades: {}, // { upgradeId: true } for purchased upgrades
@@ -502,22 +523,99 @@ const npcs = {
   },
 };
 
-const dailyJobs = [
+// LEGITIMATE JOBS - Give Maincoins (normal career jobs)
+const legitimateJobs = [
+  {
+    id: "leg_hotel_manager",
+    supervisorName: "Margaret Chen",
+    title: "Hotel Manager",
+    description: "Manage bookings and guest coordination",
+    reward: 300,
+    difficulty: "Easy",
+    duration: "5 min",
+  },
+  {
+    id: "leg_warehouse_worker",
+    supervisorName: "James Rodriguez",
+    title: "Warehouse Worker",
+    description: "Sort and organize inventory",
+    reward: 200,
+    difficulty: "Easy",
+    duration: "3 min",
+  },
+  {
+    id: "leg_barista",
+    supervisorName: "Sophie Williams",
+    title: "Barista",
+    description: "Prepare and serve coffee orders",
+    reward: 150,
+    difficulty: "Easy",
+    duration: "2 min",
+  },
+  {
+    id: "leg_tutor",
+    supervisorName: "Dr. Patel",
+    title: "Online Tutor",
+    description: "Teach students remotely",
+    reward: 400,
+    difficulty: "Medium",
+    duration: "6 min",
+  },
+  {
+    id: "leg_delivery",
+    supervisorName: "Alex Kumar",
+    title: "Delivery Driver",
+    description: "Deliver packages on time",
+    reward: 250,
+    difficulty: "Medium",
+    duration: "4 min",
+  },
+  {
+    id: "leg_security_guard",
+    supervisorName: "Officer Blake",
+    title: "Security Guard",
+    description: "Monitor and patrol facility",
+    reward: 280,
+    difficulty: "Medium",
+    duration: "5 min",
+  },
+  {
+    id: "leg_graphic_designer",
+    supervisorName: "Lisa Chen",
+    title: "Graphic Designer",
+    description: "Create visual designs for clients",
+    reward: 500,
+    difficulty: "Hard",
+    duration: "8 min",
+  },
+  {
+    id: "leg_accountant",
+    supervisorName: "Thomas Wright",
+    title: "Accountant",
+    description: "Audit and reconcile financial records",
+    reward: 550,
+    difficulty: "Hard",
+    duration: "10 min",
+  },
+];
+
+// DARKNET JOBS - Give Hackcoins (hacking/criminal jobs)
+const darknetJobs = [
   {
     id: "job_scan_subnet",
     npcId: "rogue_hacker",
     title: "Scan Subnet Range",
     description: "Probe and catalog unknown subnet (XXX.XXX.0.0/16)",
-    reward: 50, // Maincoins
+    reward: 75, // Hackcoins
     difficulty: "Easy",
-    action: "probe_random", // Action type
+    action: "probe_random",
   },
   {
     id: "job_break_encryption",
     npcId: "rogue_hacker",
     title: "Break Encryption",
     description: "Bypass 1 encryption barrier on any target",
-    reward: 75,
+    reward: 125,
     difficulty: "Medium",
     action: "breach_encryption",
   },
@@ -526,7 +624,7 @@ const dailyJobs = [
     npcId: "corporate_spy",
     title: "Corporate Network Intel",
     description: "Discover all IPs of a corporate faction",
-    reward: 100,
+    reward: 200,
     difficulty: "Hard",
     action: "discover_faction",
   },
@@ -535,7 +633,7 @@ const dailyJobs = [
     npcId: "network_broker",
     title: "Network Analysis",
     description: "Successfully defend against 5 counterhacks",
-    reward: 60,
+    reward: 100,
     difficulty: "Medium",
     action: "survive_counterhacks",
   },
@@ -544,7 +642,7 @@ const dailyJobs = [
     npcId: "black_market_ai",
     title: "Computational Task",
     description: "Complete any 3 attacks in one session",
-    reward: 80,
+    reward: 150,
     difficulty: "Medium",
     action: "multiple_attacks",
   },
@@ -553,7 +651,7 @@ const dailyJobs = [
     npcId: "rogue_hacker",
     title: "DNS Hijacking",
     description: "Discover 5 or more new IP signatures",
-    reward: 120,
+    reward: 225,
     difficulty: "Hard",
     action: "discover_ips",
   },
@@ -563,7 +661,7 @@ const dailyJobs = [
     title: "Firewall Architecture",
     description:
       "Breach all 3 protection types (encryption, tracking, monitoring)",
-    reward: 150,
+    reward: 300,
     difficulty: "Hard",
     action: "breach_all_types",
   },
@@ -572,7 +670,7 @@ const dailyJobs = [
     npcId: "network_broker",
     title: "Defense Infrastructure",
     description: "Build 5 defensive systems",
-    reward: 70,
+    reward: 120,
     difficulty: "Medium",
     action: "build_defenses",
   },
@@ -580,6 +678,7 @@ const dailyJobs = [
 
 function initializeJobs() {
   refreshDailyJobs();
+  refreshDailyDarknetJobs();
 }
 
 function refreshDailyJobs() {
@@ -587,13 +686,31 @@ function refreshDailyJobs() {
   gameState.lastJobRefresh = today;
   gameState.jobsRefreshedToday = true;
 
-  // Randomly select 4 jobs from available jobs
-  const shuffled = [...dailyJobs].sort(() => Math.random() - 0.5);
+  // Randomly select 4 legitimate jobs
+  const shuffled = [...legitimateJobs].sort(() => Math.random() - 0.5);
   gameState.availableJobs = {};
 
   for (let i = 0; i < Math.min(4, shuffled.length); i++) {
     const job = shuffled[i];
     gameState.availableJobs[job.id] = {
+      ...job,
+      completed: false,
+    };
+  }
+}
+
+function refreshDailyDarknetJobs() {
+  const today = new Date().toDateString();
+  gameState.lastDarknetRefresh = today;
+  gameState.darknetRefreshedToday = true;
+
+  // Randomly select 4 darknet jobs
+  const shuffled = [...darknetJobs].sort(() => Math.random() - 0.5);
+  gameState.availableDarknetJobs = {};
+
+  for (let i = 0; i < Math.min(4, shuffled.length); i++) {
+    const job = shuffled[i];
+    gameState.availableDarknetJobs[job.id] = {
       ...job,
       completed: false,
       progress: 0,
@@ -604,23 +721,86 @@ function refreshDailyJobs() {
 function completeJob(jobId) {
   const job = gameState.availableJobs[jobId];
   if (!job) return false;
-  if (job.completed) return false; // Prevent double completion
+  if (job.completed) return false;
 
+  // Check if enough time has passed for the job duration
+  const startTime = gameState.jobStartTimes[jobId];
+
+  // If job not started yet, start it
+  if (!startTime) {
+    gameState.jobStartTimes[jobId] = Date.now();
+    gameState.jobFocusTimes[jobId] = 0;
+    gameState.activeJobId = jobId;
+    showJobModal(job);
+    return false;
+  }
+
+  // If no modal currently open, just reopen it (user clicked CONTINUE or returned)
+  if (gameState.activeJobId !== jobId) {
+    gameState.activeJobId = jobId;
+    showJobModal(job);
+    return false;
+  }
+
+  // Modal is open - check if job is complete
+  // Parse duration to milliseconds (e.g., "5 min" -> 5 * 60 * 1000)
+  const durationMatch = job.duration.match(/(\d+)\s*min/i);
+  const durationMs = durationMatch
+    ? parseInt(durationMatch[1]) * 60 * 1000
+    : 60000;
+
+  // Calculate time spent
+  const totalElapsedTime = Date.now() - startTime;
+  const focusedTime = gameState.jobFocusTimes[jobId] || 0;
+  const idleTime = totalElapsedTime - focusedTime;
+
+  // Progress: focused time counts 1:1, idle time counts at 50% speed
+  const effectiveProgress = focusedTime + idleTime * 0.5;
+
+  if (effectiveProgress < durationMs) {
+    addHackLog(
+      `⏱️ Job progress: ${Math.round((effectiveProgress / durationMs) * 100)}%`,
+      "info",
+    );
+    return false;
+  }
+
+  // Job duration completed - award it
   gameState.availableJobs[jobId].completed = true;
   gameState.completedJobs[jobId] = true;
+  gameState.activeJobId = null;
+  closeJobModal();
 
-  // Calculate tier bonus (highest tier across all factions)
+  addCurrency("maincoins", job.reward);
+  displayCurrencies();
+
+  addHackLog(`✓ Job completed: ${job.title}`, "success");
+  addHackLog(`✓ Earned ${job.reward} Maincoins`, "success");
+
+  return true;
+}
+
+function completeDarknetJob(jobId) {
+  const job = gameState.availableDarknetJobs[jobId];
+  if (!job) return false;
+  if (job.completed) return false;
+  if (!canCompleteDarknetJob(jobId)) {
+    addHackLog(`✗ Darknet job not ready: ${job.title}`, "error");
+    return false;
+  }
+
+  gameState.availableDarknetJobs[jobId].completed = true;
+  gameState.completedDarknetJobs[jobId] = true;
+
+  // Calculate tier bonus for darknet jobs
   let maxTierBonus = 1.0;
   for (const [factionId, rep] of Object.entries(gameState.factionReputation)) {
     const tier = getTierFromReputation(rep);
     if (tier.tier >= 3) {
-      // Elite (tier 3) or Legendary (tier 4)
       if (tier.tier === 4) {
-        // Legendary
         maxTierBonus = 2.0;
-        break; // Highest possible, stop searching
+        break;
       } else if (tier.tier === 3 && maxTierBonus < 1.5) {
-        // Elite
         maxTierBonus = 1.5;
       }
     }
@@ -628,27 +808,253 @@ function completeJob(jobId) {
 
   let finalReward = Math.floor(job.reward * maxTierBonus);
 
-  // Award Maincoins
-  addCurrency("maincoins", finalReward);
+  // Award Hackcoins for darknet jobs
+  addCurrency("hackcoins", finalReward);
   displayCurrencies();
 
-  addHackLog(`✓ Job completed: ${job.title}`, "success");
+  addHackLog(`✓ Darknet job completed: ${job.title}`, "success");
 
   if (maxTierBonus > 1.0) {
     const tierName = maxTierBonus === 2.0 ? "Legendary" : "Elite";
     addHackLog(
-      `✓ Earned ${finalReward} Maincoins (${tierName} tier bonus: +${Math.round((maxTierBonus - 1) * 100)}%)`,
+      `✓ Earned ${finalReward} Hackcoins (${tierName} tier bonus: +${Math.round((maxTierBonus - 1) * 100)}%)`,
       "success",
     );
   } else {
-    addHackLog(`✓ Earned ${finalReward} Maincoins`, "success");
+    addHackLog(`✓ Earned ${finalReward} Hackcoins`, "success");
   }
 
   return true;
 }
 
+function showJobModal(job) {
+  // Remove existing modal if any
+  const existing = document.getElementById("job-modal");
+  if (existing) existing.remove();
+
+  // Create modal
+  const modal = document.createElement("div");
+  modal.id = "job-modal";
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+  `;
+
+  const jobId = gameState.activeJobId;
+  const startTime = gameState.jobStartTimes[jobId];
+  const durationMatch = job.duration.match(/(\d+)\s*min/i);
+  const durationSec = durationMatch ? parseInt(durationMatch[1]) * 60 : 60;
+
+  modal.innerHTML = `
+    <div style="background: linear-gradient(135deg, rgba(0,40,80,0.95), rgba(0,60,120,0.95)); border: 2px solid #00ff00; border-radius: 10px; padding: 30px; max-width: 500px; color: #00ff00; font-family: monospace;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 24px; margin-bottom: 10px;">💼 ${job.title}</div>
+        <div style="color: #cccccc; font-size: 14px; margin-bottom: 10px;">${job.description}</div>
+        <div style="color: #ffaa00;">Supervisor: ${job.supervisorName}</div>
+      </div>
+
+      <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+          <span>Progress:</span>
+          <span id="job-progress-text">0%</span>
+        </div>
+        <div style="background: rgba(0,20,40,0.8); height: 20px; border-radius: 3px; overflow: hidden; border: 1px solid #00ff00;">
+          <div id="job-progress-bar" style="height: 100%; background: linear-gradient(90deg, #00ff00, #00aa00); width: 0%; transition: width 0.1s linear;"></div>
+        </div>
+        <div style="text-align: center; color: #888888; font-size: 12px; margin-top: 10px;">
+          Stay focused to work faster!
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button id="job-exit-btn" style="flex: 1; padding: 10px; background: rgba(200,0,0,0.6); border: 1px solid #ff6666; color: #ff6666; cursor: pointer; border-radius: 5px; font-family: monospace; font-weight: bold;">EXIT (work slower)</button>
+        <button id="job-claim-btn" style="flex: 1; padding: 10px; background: rgba(0,100,0,0.6); border: 1px solid #00ff00; color: #00ff00; cursor: pointer; border-radius: 5px; font-family: monospace; font-weight: bold; display: none;">CLAIM REWARD</button>
+      </div>
+    </div>
+
+    <style>
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+    </style>
+  `;
+
+  document.body.appendChild(modal);
+
+  const exitBtn = document.getElementById("job-exit-btn");
+  const claimBtn = document.getElementById("job-claim-btn");
+  const progressBar = document.getElementById("job-progress-bar");
+  const progressText = document.getElementById("job-progress-text");
+
+  // Exit button - close modal
+  exitBtn.addEventListener("click", () => {
+    closeJobModal();
+  });
+
+  // Claim button - complete job
+  claimBtn.addEventListener("click", () => {
+    completeJob(jobId);
+    displayJobsPanel();
+  });
+
+  // Update progress every 100ms
+  const updateInterval = setInterval(() => {
+    const jobId = gameState.activeJobId;
+    if (!jobId) {
+      clearInterval(updateInterval);
+      return;
+    }
+
+    const job = gameState.availableJobs[jobId];
+    if (!job || job.completed) {
+      clearInterval(updateInterval);
+      closeJobModal();
+      return;
+    }
+
+    const start = gameState.jobStartTimes[jobId];
+    const durationMatch = job.duration.match(/(\d+)\s*min/i);
+    const durationMs = durationMatch
+      ? parseInt(durationMatch[1]) * 60 * 1000
+      : 60000;
+
+    const totalElapsed = Date.now() - start;
+    const focused = gameState.jobFocusTimes[jobId] || 0;
+    const idle = totalElapsed - focused;
+    const effectiveProgress = focused + idle * 0.5;
+
+    const percentage = Math.min(
+      100,
+      Math.round((effectiveProgress / durationMs) * 100),
+    );
+    progressBar.style.width = percentage + "%";
+    progressText.textContent = percentage + "%";
+
+    if (percentage >= 100) {
+      clearInterval(updateInterval);
+      exitBtn.style.display = "none";
+      claimBtn.style.display = "block";
+      progressText.textContent = "✓ COMPLETE!";
+      progressText.style.color = "#00ff00";
+    }
+  }, 100);
+}
+
+function closeJobModal() {
+  const jobId = gameState.activeJobId;
+  if (!jobId) return;
+
+  // Track time spent on modal as "focused"
+  const lastFocusEnd = gameState.jobFocusTimes.lastFocusEnd || 0;
+  const now = Date.now();
+
+  // If we just closed, add the time spent to focused time
+  if (lastFocusEnd > 0) {
+    gameState.jobFocusTimes[jobId] =
+      (gameState.jobFocusTimes[jobId] || 0) + (now - lastFocusEnd);
+  }
+
+  // Remove modal
+  const modal = document.getElementById("job-modal");
+  if (modal) modal.remove();
+
+  gameState.activeJobId = null;
+}
+
+// Track focus time - when modal is focused, time counts at 1x speed
+window.addEventListener("focus", () => {
+  const jobId = gameState.activeJobId;
+  if (!jobId) return;
+  gameState.jobFocusTimes.focusStart = Date.now();
+});
+
+window.addEventListener("blur", () => {
+  const jobId = gameState.activeJobId;
+  if (!jobId) return;
+
+  const focusStart = gameState.jobFocusTimes.focusStart || Date.now();
+  const focusEnd = Date.now();
+  gameState.jobFocusTimes[jobId] =
+    (gameState.jobFocusTimes[jobId] || 0) + (focusEnd - focusStart);
+});
+
 function getAvailableJobs() {
   return Object.values(gameState.availableJobs);
+}
+
+function getAvailableDarknetJobs() {
+  return Object.values(gameState.availableDarknetJobs);
+}
+
+function canCompleteDarknetJob(jobId) {
+  const job = gameState.availableDarknetJobs[jobId];
+  if (!job || job.completed) return false;
+
+  // Check darknet job-specific conditions
+
+  switch (job.id) {
+    case "job_scan_subnet":
+      // Probe and catalog unknown subnet - need at least 1 probe attempt
+      return gameState.jobProgress.probesAttempted >= 1;
+
+    case "job_break_encryption":
+      // Bypass 1 encryption barrier - need at least 1 breach
+      return gameState.jobProgress.breachesPerformed >= 1;
+
+    case "job_corporate_intel":
+      // Discover all IPs of a corporate faction - check if a faction is fully discovered
+      for (const [factionId, faction] of Object.entries(factions)) {
+        if (["ironGuard"].includes(factionId)) {
+          const allDiscovered = faction.ips.every(
+            (ip) => gameState.discoveredIPs[ip] !== undefined,
+          );
+          if (allDiscovered) return true;
+        }
+      }
+      return false;
+
+    case "job_network_analysis":
+      // Defend against 5 counterhacks - need at least 5 counterhacks
+      return gameState.jobProgress.counterhacksDefended >= 5;
+
+    case "job_ai_training":
+      // Complete any 3 attacks - need at least 3 attacks
+      return gameState.jobProgress.attacksCompleted >= 3;
+
+    case "job_dns_hijack":
+      // Discover 5 or more IP signatures
+      return gameState.jobProgress.ipDiscoveries >= 5;
+
+    case "job_firewall_breach":
+      // Breach all 3 protection types - all breaches must be at least 1
+      return (
+        gameState.breaches.encryption >= 3 &&
+        gameState.breaches.tracking >= 3 &&
+        gameState.breaches.monitoring >= 3
+      );
+
+    case "job_build_defense":
+      // Build 5 defensive systems (sum of all defenses)
+      const totalDefenses =
+        gameState.defenses.antivirus +
+        gameState.defenses.firewall +
+        gameState.defenses.vpn +
+        gameState.defenses.backup;
+      return totalDefenses >= 5;
+
+    default:
+      return true;
+  }
 }
 
 // UPGRADE UTILITIES (Phase 4)
@@ -1111,41 +1517,129 @@ function displayJobsPanel() {
   let html = `<p style='color: #00cc00; margin-bottom: 15px;'>📊 ${Object.values(gameState.completedJobs).length} jobs completed</p>`;
 
   jobs.forEach((job) => {
-    const npc = npcs[job.npcId];
-    if (!npc) {
-      console.error(`NPC not found for job ${job.id}: ${job.npcId}`);
-      return; // Skip this job if NPC doesn't exist
-    }
     const statusColor = job.completed ? "#00aa00" : "#ffaa00";
     const statusText = job.completed ? "✓ COMPLETED" : "○ AVAILABLE";
+    const hasStarted = !!gameState.jobStartTimes[job.id];
+
+    let statusDisplay = "";
+    let buttonHtml = "";
+
+    if (!job.completed) {
+      if (hasStarted) {
+        statusDisplay = `<div style="color: #ffaa00; font-size: 10px; margin-top: 5px;">Working... Click CONTINUE to track progress</div>`;
+        buttonHtml = `<button class="job-complete-btn" data-job-id="${job.id}" style="background: #0a6a6a; border: 1px solid #00dddd; color: #00dddd; cursor: pointer; padding: 4px 8px; font-family: monospace; font-size: 10px;">CONTINUE</button>`;
+      } else {
+        statusDisplay = "";
+        buttonHtml = `<button class="job-complete-btn" data-job-id="${job.id}" style="background: #0a3a0a; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; padding: 4px 8px; font-family: monospace; font-size: 10px;">START</button>`;
+      }
+    }
 
     html += `
       <div style="border: 1px solid #cccccc; padding: 10px; margin-bottom: 10px; background: rgba(200, 200, 200, 0.05);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-          <div style="font-weight: bold;">${npc.avatar} ${job.title}</div>
+          <div style="font-weight: bold;">💼 ${job.title}</div>
           <div style="color: ${statusColor}; font-weight: bold; font-size: 11px;">${statusText}</div>
         </div>
-        <div style="color: #888888; font-size: 11px; margin-bottom: 5px;">From: ${npc.name}</div>
+        <div style="color: #888888; font-size: 11px; margin-bottom: 5px;">Supervisor: ${job.supervisorName}</div>
         <div style="color: #cccccc; font-size: 12px; margin-bottom: 8px;">${job.description}</div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div style="color: #ffaa00;">💰 ${job.reward} Maincoins</div>
-          <div style="color: #666666; font-size: 11px;">Difficulty: ${job.difficulty}</div>
-          ${!job.completed ? `<button class="job-complete-btn" data-job-id="${job.id}" style="background: #0a3a0a; border: 1px solid #00ff00; color: #00ff00; padding: 4px 8px; cursor: pointer; font-family: monospace; font-size: 10px;">COMPLETE</button>` : ""}
+          <div style="color: #666666; font-size: 11px;">Duration: ${job.duration}</div>
+          ${buttonHtml}
         </div>
+        ${statusDisplay}
       </div>
     `;
   });
 
   jobsContent.innerHTML = html;
 
-  // Wire up complete buttons
+  // Wire up START/CONTINUE buttons
   document.querySelectorAll(".job-complete-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const jobId = e.target.dataset.jobId;
       completeJob(jobId);
-      displayJobsPanel(); // Refresh
     });
   });
+
+  // Refresh every 500ms to update modal status if it's visible
+  setTimeout(() => {
+    if (document.getElementById("jobs-content")) {
+      displayJobsPanel();
+    }
+  }, 500);
+}
+
+// DARKNET JOBS PANEL (Phase 3 - Criminal Jobs)
+function displayDarknetJobsPanel() {
+  const darknetContent = document.getElementById("darknet-content");
+  if (!darknetContent) {
+    console.error("darknet-content element not found");
+    return;
+  }
+
+  const jobs = getAvailableDarknetJobs();
+
+  if (!jobs || jobs.length === 0) {
+    darknetContent.innerHTML =
+      "<p style='color: #888888;'>No darknet jobs available. Check back later!</p>";
+    return;
+  }
+
+  let html = `<p style='color: #ff6666; margin-bottom: 15px;'>🕷️ ${Object.values(gameState.completedDarknetJobs).length} contracts completed</p>`;
+
+  jobs.forEach((job) => {
+    const statusColor = job.completed ? "#00aa00" : "#ff6666";
+    const statusText = job.completed ? "✓ COMPLETED" : "● ACTIVE";
+    const hasStarted = !!gameState.jobStartTimes[job.id];
+
+    let statusDisplay = "";
+    let buttonHtml = "";
+
+    if (!job.completed) {
+      if (hasStarted) {
+        statusDisplay = `<div style="color: #ff6666; font-size: 10px; margin-top: 5px;">Contract in progress...</div>`;
+        buttonHtml = `<button class="darknet-job-btn" data-job-id="${job.id}" style="background: #6a0a0a; border: 1px solid #ff6666; color: #ff6666; cursor: pointer; padding: 4px 8px; font-family: monospace; font-size: 10px;">CHECK</button>`;
+      } else {
+        statusDisplay = "";
+        buttonHtml = `<button class="darknet-job-btn" data-job-id="${job.id}" style="background: #0a0a0a; border: 1px solid #ff6666; color: #ff6666; cursor: pointer; padding: 4px 8px; font-family: monospace; font-size: 10px;">ACCEPT</button>`;
+      }
+    }
+
+    html += `
+      <div style="border: 1px solid #ff6666; padding: 10px; margin-bottom: 10px; background: rgba(100, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+          <div style="font-weight: bold; color: #ff6666;">🕷️ ${job.title}</div>
+          <div style="color: ${statusColor}; font-weight: bold; font-size: 11px;">${statusText}</div>
+        </div>
+        <div style="color: #888888; font-size: 11px; margin-bottom: 5px;">Client: ${job.npcId === "rogue_hacker" ? "Rogue Collective" : "Corporate Buyer"}</div>
+        <div style="color: #cccccc; font-size: 12px; margin-bottom: 8px;">${job.description}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="color: #ccaa00;">🪙 ${job.reward} Hackcoins</div>
+          <div style="color: #666666; font-size: 11px;">Risk: ${job.difficulty}</div>
+          ${buttonHtml}
+        </div>
+        ${statusDisplay}
+      </div>
+    `;
+  });
+
+  darknetContent.innerHTML = html;
+
+  // Wire up buttons
+  document.querySelectorAll(".darknet-job-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const jobId = e.target.dataset.jobId;
+      completeDarknetJob(jobId);
+    });
+  });
+
+  // Refresh every 500ms
+  setTimeout(() => {
+    if (document.getElementById("darknet-content")) {
+      displayDarknetJobsPanel();
+    }
+  }, 500);
 }
 
 function showSaveScreen() {
@@ -1440,6 +1934,8 @@ function switchMenu(e) {
     displayFactionsPanel();
   } else if (menuName === "jobs") {
     displayJobsPanel();
+  } else if (menuName === "darknet") {
+    displayDarknetJobsPanel();
   } else if (menuName === "upgrades") {
     displayUpgradesPanel();
   }
@@ -1499,6 +1995,8 @@ function probeIP() {
     if (foundIP) {
       if (!gameState.discoveredIPs[ip]) {
         gameState.discoveredIPs[ip] = foundIP;
+        gameState.jobProgress.probesAttempted++;
+        gameState.jobProgress.ipDiscoveries++;
         addCurrency("findPoints", 10); // Earn for discovering IP
         displayCurrencies();
         displaySignatures();
@@ -1674,6 +2172,7 @@ function addProbeLog(message, type = "info") {
 
 // HACK MENU FUNCTIONS
 document.querySelectorAll(".hack-btn").forEach((btn) => {
+  btn.dataset.originalText = btn.innerHTML;
   btn.addEventListener("click", handleAttack);
 });
 
@@ -1713,6 +2212,17 @@ function isValidIP(ip) {
 function handleAttack(e) {
   if (gameState.isHacking || gameState.isGameOver) return;
 
+  // Check cooldown
+  const now = Date.now();
+  const timeSinceLastAttack = now - gameState.lastAttackTime;
+  if (timeSinceLastAttack < gameState.attackCooldown) {
+    const timeLeft = Math.ceil(
+      (gameState.attackCooldown - timeSinceLastAttack) / 1000,
+    );
+    addHackLog(`⏱️ Attack on cooldown. Wait ${timeLeft}s...`, "warning");
+    return;
+  }
+
   const ip = document.getElementById("hack-ip").value.trim();
 
   if (!ip) {
@@ -1735,7 +2245,9 @@ function handleAttack(e) {
   const attack = attacks[attackType];
 
   gameState.isHacking = true;
+  gameState.lastAttackTime = now; // Set cooldown
   disableHackButtons();
+  startCooldownTimer(); // Show cooldown feedback
 
   if (!gameState.targetHealthByIP[ip]) {
     gameState.targetHealthByIP[ip] = 100;
@@ -1883,6 +2395,7 @@ function executeAttack(ip, attack, attackType) {
     }
 
     applyDamageToTarget(ip, damageToApply);
+    gameState.jobProgress.attacksCompleted++;
     addCurrency("hackPoints", 5); // Earn points for hack attempt
 
     if (bonusMsg) {
@@ -1941,6 +2454,7 @@ function triggerCounterhack(ip, attack) {
   );
 
   setTimeout(() => {
+    gameState.jobProgress.counterhacksDefended++;
     applyDamageToHPT(counterhackDamage);
 
     if (gameState.hptHealth <= 0) {
@@ -2256,6 +2770,7 @@ function addHackLog(message, type = "info") {
 function disableHackButtons() {
   document.querySelectorAll(".hack-btn").forEach((btn) => {
     btn.disabled = true;
+    btn.dataset.cooldownActive = "true";
   });
 }
 
@@ -2263,8 +2778,40 @@ function enableHackButtons() {
   if (!gameState.isGameOver) {
     document.querySelectorAll(".hack-btn").forEach((btn) => {
       btn.disabled = false;
+      btn.dataset.cooldownActive = "false";
+      btn.textContent = btn.dataset.originalText || btn.textContent;
     });
   }
+}
+
+function startCooldownTimer() {
+  const cooldownMs = gameState.attackCooldown;
+  const startTime = gameState.lastAttackTime;
+  const buttons = document.querySelectorAll(".hack-btn");
+
+  const updateCooldownDisplay = () => {
+    const now = Date.now();
+    const elapsed = now - startTime;
+    const remaining = cooldownMs - elapsed;
+
+    if (remaining > 0) {
+      const secondsLeft = (remaining / 1000).toFixed(1);
+      buttons.forEach((btn) => {
+        if (btn.disabled) {
+          btn.innerHTML = `⏳ ${secondsLeft}s`;
+          btn.style.opacity = "0.6";
+        }
+      });
+      setTimeout(updateCooldownDisplay, 100);
+    } else {
+      enableHackButtons();
+      buttons.forEach((btn) => {
+        btn.innerHTML = btn.dataset.originalText;
+        btn.style.opacity = "1";
+      });
+    }
+  };
+  updateCooldownDisplay();
 }
 
 // DEFENSE MENU FUNCTIONS
@@ -2282,6 +2829,7 @@ function buildDefense(e) {
 
   setTimeout(() => {
     gameState.defenses[defenseType]++;
+    gameState.jobProgress.defenses++;
     addCurrency("defendPoints", 8); // Earn for building defense
     displayCurrencies();
     updateDefensesList();
@@ -2359,6 +2907,7 @@ function useBreach(e) {
 
   setTimeout(() => {
     gameState.breaches[breachType]++;
+    gameState.jobProgress.breachesPerformed++;
     addCurrency("breachPoints", 15); // Earn for successful breach
     displayCurrencies();
     const totalBreaches = Object.values(gameState.breaches).reduce(
@@ -2904,4 +3453,13 @@ function initializeGamee() {
 const dailyJobss = "error";
 function displayJobsPanell() {
   initializeJobs();
+}
+function useBreachh() {
+  let stuff;
+}
+function probeIPP() {
+  probeIP();
+}
+function displayDarknetJobsPanell() {
+  let something;
 }
