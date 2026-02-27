@@ -1,4 +1,4 @@
-name: Deploy Latest Tag to GitHub Pages
+name: Deploy Latest Tag to Branch
 
 on:
   push:
@@ -23,12 +23,28 @@ jobs:
       #     npm run build
       #   # Ensure publish_dir corresponds to your build output
 
-      # Deploy to gh-pages branch using peaceiris action
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v6
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./ # Change to your build output directory if needed
-          publish_branch: gh-pages
-          user_name: "github-actions[bot]"
-          user_email: "github-actions[bot]@users.noreply.github.com"
+      # Configure Git credentials for pushing
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      # Checkout the gh-pages branch to prepare for pushing
+      - name: Checkout gh-pages branch
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+
+      # Copy the built/source files to the gh-pages branch
+      - name: Prepare files for gh-pages branch
+        run: |
+          # Copy your build output to the root of the gh-pages branch
+          # Adjust paths as needed for your project
+          cp -r /* ./ || true
+          git add .
+          git commit -m "Deploy from tag ${{ github.ref_name }}" || echo "No changes to commit"
+
+      # Push to gh-pages branch
+      - name: Push to gh-pages branch
+        run: |
+          git push origin gh-pages
