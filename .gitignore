@@ -3,4 +3,6 @@ node_modules/
 .DS_Store
 .env
 dist/
-test_*
+test_* 
+# I added the "test_" because the AI kept making "test_" files with results about what it coded
+# What was the AI thinking here? None of the files (that the AI added) were actually there
