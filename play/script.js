@@ -51,7 +51,7 @@ const gameState = {
   autoSave: null, // Auto-save stored separately
 
   // MISSIONS SYSTEM
-  currentMissionId: "mission_001_spamton", // Current mission
+  currentMissionId: "mission_001_intro", // Current mission
   completedMissions: {}, // Track completed missions
   missionProgress: {}, // Track progress on objectives
 
@@ -219,10 +219,11 @@ const factions = {
 const missions = {
   mission_001_intro: {
     id: "mission_001_intro",
-    title: "Network Reconnaissance",
+    title: "First Lead",
     description:
-      "HPT briefing: Intelligence reports suggest Spamton has been coordinating with underworld factions. Begin surveillance.",
-    objective: "Discover and identify at least 3 faction networks",
+      "HPT briefing: anomalous traffic has been traced to the 91.200.165.* subnet. Start there and identify who is operating it.",
+    objective: "Probe the 91.200.165.* range and identify the network behind it",
+    hint: "Lead: start with 91.200.165.44, 91.200.165.45, or 91.200.165.46.",
     rewards: {
       hackcoins: 0,
       experience: 50,
@@ -231,10 +232,11 @@ const missions = {
   },
   mission_002_collective: {
     id: "mission_002_collective",
-    title: "The Collective Investigation",
+    title: "Collective Network Sweep",
     description:
-      "Our analysts tracked encrypted communications to The Collective, a hacktivist group. Investigate their operations.",
-    objective: "Discover all Collective network nodes (91.200.165.44-46)",
+      "The first lead belongs to The Collective. Finish mapping their three-node subnet before moving on.",
+    objective: "Map the remaining Collective nodes in the 91.200.165.* subnet",
+    hint: "The three Collective nodes use consecutive addresses in the same subnet.",
     rewards: {
       hackcoins: 0,
       experience: 75,
@@ -245,8 +247,9 @@ const missions = {
     id: "mission_003_neon",
     title: "Neon Syndicate Tracking",
     description:
-      "Intelligence suggests criminal networks are involved. Track the Neon Syndicate's operations.",
-    objective: "Discover all Neon Syndicate nodes (77.88.99.11-13)",
+      "Collective traffic points toward a criminal relay on the 77.88.99.* block. Track the Neon Syndicate there.",
+    objective: "Map the Neon Syndicate subnet in the 77.88.99.* range",
+    hint: "Look for three adjacent nodes in 77.88.99.*.",
     rewards: {
       hackcoins: 0,
       experience: 75,
@@ -257,8 +260,9 @@ const missions = {
     id: "mission_004_ghost",
     title: "Ghost Protocol Monitoring",
     description:
-      "A rogue hacking collective has caught our attention. Monitor Ghost Protocol's infrastructure.",
-    objective: "Discover all Ghost Protocol nodes (62.34.56.78-80)",
+      "Recovered routing data points to Ghost Protocol infrastructure in the 62.34.56.* block.",
+    objective: "Map Ghost Protocol infrastructure in the 62.34.56.* range",
+    hint: "Ghost Protocol also uses a three-node cluster.",
     rewards: {
       hackcoins: 0,
       experience: 75,
@@ -269,8 +273,9 @@ const missions = {
     id: "mission_005_corporate",
     title: "Iron Guard Connection",
     description:
-      "Evidence suggests corporate interests are protecting Spamton. Investigate Iron Guard's involvement.",
-    objective: "Discover all Iron Guard nodes (134.209.29.103-105)",
+      "Ghost Protocol traffic terminates at a hardened corporate subnet. Investigate Iron Guard's 134.209.29.* network.",
+    objective: "Map Iron Guard nodes in the 134.209.29.* range",
+    hint: "Expect tighter protection on the three Iron Guard hosts.",
     rewards: {
       hackcoins: 0,
       experience: 75,
@@ -282,8 +287,8 @@ const missions = {
     title: "Cipher Collective Alert",
     description:
       "WARNING: A government agency called Cipher Collective has been detected. They protect elite networks. Avoid direct confrontation.",
-    objective:
-      "Map Cipher Collective infrastructure (198.51.100.42-44) - Intel only, no attacks",
+    objective: "Map Cipher Collective infrastructure in the 198.51.100.* range",
+    hint: "Intel only. Their three nodes sit on the same subnet.",
     rewards: {
       hackcoins: 0,
       experience: 50,
@@ -294,8 +299,9 @@ const missions = {
     id: "mission_007_broker",
     title: "Mirror Net Intelligence",
     description:
-      "A network broker facilitating all these connections has been identified. Catalog Mirror Net nodes.",
-    objective: "Discover all Mirror Net nodes (45.33.32.156-158)",
+      "Cipher telemetry exposes a broker layer inside the 45.33.32.* block. Catalog Mirror Net activity there.",
+    objective: "Map Mirror Net nodes in the 45.33.32.* range",
+    hint: "Mirror Net again uses a compact three-node cluster.",
     rewards: {
       hackcoins: 0,
       experience: 75,
@@ -306,8 +312,9 @@ const missions = {
     id: "mission_008_rogue_ai",
     title: "Void Echo: Rogue AI",
     description:
-      "Final piece of the puzzle: An AI entity controls Spamton's security. Void Echo must be neutralized or bypassed.",
-    objective: "Discover all Void Echo nodes (192.0.2.195-197)",
+      "Mirror Net logs identify an AI-controlled defense mesh in the 192.0.2.* range.",
+    objective: "Map the Void Echo nodes in the 192.0.2.* range",
+    hint: "Void Echo controls three adjacent high-security hosts.",
     rewards: {
       hackcoins: 0,
       experience: 75,
@@ -320,6 +327,7 @@ const missions = {
     description:
       "All intelligence gathered. HPT has pinpointed Spamton's main headquarters. Final strike authorized.",
     objective: "Pinpoint Spamton's exact location and extract coordinates",
+    hint: "Your target hides in the 187.* range, but only one host is the real headquarters.",
     rewards: {
       hackcoins: 0,
       experience: 100,
@@ -379,6 +387,190 @@ function initializeFactions() {
       gameState.factionReputation[factionId] = 0;
     }
   });
+}
+
+const factionTargetProfiles = {
+  spamton: {
+    protection: 5,
+    danger: "EXTREME",
+    hint: "PRIMARY TARGET: Spamton's main headquarters",
+  },
+  collective: {
+    protection: 2,
+    danger: "MEDIUM",
+    hint: "Hacktivist relay node carrying encrypted coordination traffic",
+  },
+  neonSyndicate: {
+    protection: 3,
+    danger: "HIGH",
+    hint: "Criminal relay node handling contraband traffic",
+  },
+  ghostProtocol: {
+    protection: 3,
+    danger: "HIGH",
+    hint: "Stealth infrastructure with active intrusion defenses",
+  },
+  ironGuard: {
+    protection: 4,
+    danger: "HIGH",
+    hint: "Corporate security host with hardened perimeter controls",
+  },
+  cipher: {
+    protection: 5,
+    danger: "CRITICAL",
+    hint: "Government-grade agency node. Treat as high-risk intelligence only.",
+  },
+  mirrorNet: {
+    protection: 3,
+    danger: "MEDIUM",
+    hint: "Broker node mirroring traffic between multiple factions",
+  },
+  voidEcho: {
+    protection: 5,
+    danger: "CRITICAL",
+    hint: "AI-controlled defense node with adaptive countermeasures",
+  },
+};
+
+function isFactionFullyDiscovered(factionId) {
+  const faction = factions[factionId];
+  return Boolean(
+    faction &&
+      faction.ips &&
+      faction.ips.length > 0 &&
+      faction.ips.every((ip) => gameState.discoveredIPs[ip] !== undefined),
+  );
+}
+
+function getFactionDiscoveredCount(factionId) {
+  const faction = factions[factionId];
+  if (!faction || !faction.ips) return 0;
+  return faction.ips.filter((ip) => gameState.discoveredIPs[ip] !== undefined)
+    .length;
+}
+
+function buildFactionTargetEntry(ip) {
+  const factionId = getFactionForIP(ip);
+  if (!factionId) return null;
+
+  const faction = factions[factionId];
+  const profile = factionTargetProfiles[factionId] || {
+    protection: 2,
+    danger: "MEDIUM",
+    hint: `${faction.name} network node`,
+  };
+  const nodeIndex = Math.max(0, faction.ips.indexOf(ip)) + 1;
+
+  return {
+    ip,
+    signature:
+      factionId === "spamton"
+        ? "Spamton HQ - CRITICAL THREAT"
+        : `${faction.name} Node ${nodeIndex}`,
+    type: "faction",
+    factionId,
+    protection: profile.protection,
+    danger: profile.danger,
+    owner:
+      factionId === "spamton" ? "Spamton (Hack Organization)" : faction.name,
+    hint: profile.hint,
+  };
+}
+
+function getUndiscoveredTargetInfo(ip) {
+  return allIPs.find((entry) => entry.ip === ip) || buildFactionTargetEntry(ip);
+}
+
+function getTargetInfo(ip) {
+  if (!ip) return null;
+  const discovered = gameState.discoveredIPs[ip];
+  const canonical = getUndiscoveredTargetInfo(ip);
+
+  if (canonical && discovered && discovered.type === "unknown") {
+    return canonical;
+  }
+
+  return discovered || canonical;
+}
+
+function getAllTargetEntries() {
+  const targets = new Map();
+
+  allIPs.forEach((entry) => {
+    targets.set(entry.ip, entry);
+  });
+
+  Object.values(factions).forEach((faction) => {
+    (faction.ips || []).forEach((ip) => {
+      if (!targets.has(ip)) {
+        const entry = buildFactionTargetEntry(ip);
+        if (entry) {
+          targets.set(ip, entry);
+        }
+      }
+    });
+  });
+
+  return Array.from(targets.values());
+}
+
+function checkMissionProgress() {
+  let advanced = false;
+
+  while (true) {
+    const mission = getCurrentMission();
+    if (!mission) break;
+
+    let isComplete = false;
+    switch (mission.id) {
+      case "mission_001_intro":
+        isComplete = getFactionDiscoveredCount("collective") >= 1;
+        break;
+      case "mission_002_collective":
+        isComplete = isFactionFullyDiscovered("collective");
+        break;
+      case "mission_003_neon":
+        isComplete = isFactionFullyDiscovered("neonSyndicate");
+        break;
+      case "mission_004_ghost":
+        isComplete = isFactionFullyDiscovered("ghostProtocol");
+        break;
+      case "mission_005_corporate":
+        isComplete = isFactionFullyDiscovered("ironGuard");
+        break;
+      case "mission_006_cipher_briefing":
+        isComplete = isFactionFullyDiscovered("cipher");
+        break;
+      case "mission_007_broker":
+        isComplete = isFactionFullyDiscovered("mirrorNet");
+        break;
+      case "mission_008_rogue_ai":
+        isComplete = isFactionFullyDiscovered("voidEcho");
+        break;
+      case "mission_009_spamton_located":
+        isComplete = Boolean(gameState.correctIP && gameState.discoveredIPs[gameState.correctIP]);
+        break;
+      default:
+        isComplete = false;
+        break;
+    }
+
+    if (!isComplete) break;
+
+    const completedMission = mission;
+    const nextMissionId = completeMission(mission.id);
+    advanced = true;
+
+    addProbeLog(`✓ Mission complete: ${completedMission.title}`, "success");
+    if (nextMissionId && missions[nextMissionId]) {
+      addProbeLog(`> New mission: ${missions[nextMissionId].title}`, "warning");
+    }
+  }
+
+  if (advanced) {
+    displayMissionObjective();
+    displayMissionsPanel();
+  }
 }
 
 // PHASE 3: JOBS SYSTEM
@@ -1317,9 +1509,11 @@ function loadGame(slotNumber) {
   // Restore game state
   const restored = saveData.gameState;
   Object.assign(gameState, restored);
+  factions.spamton.ips = gameState.correctIP ? [gameState.correctIP] : [];
 
   updateHPTDisplay();
   updateDefensesList();
+  displayMissionObjective();
   displaySignatures();
   updateStatusMessage(`✓ Loaded save slot ${slotNumber + 1}`);
   addProbeLog(`✓ Game loaded from slot ${slotNumber + 1}`, "success");
@@ -1344,8 +1538,10 @@ function loadAutoSave() {
   );
   if (autoSave && autoSave.gameState) {
     Object.assign(gameState, autoSave.gameState);
+    factions.spamton.ips = gameState.correctIP ? [gameState.correctIP] : [];
     updateHPTDisplay();
     updateDefensesList();
+    displayMissionObjective();
     displaySignatures();
     updateStatusMessage("✓ Auto-save loaded");
     return true;
@@ -1395,7 +1591,9 @@ function displayMissionObjective() {
     }
   }
 
-  const missionText = `📋 MISSION: ${mission.title} - ${mission.objective}`;
+  const missionText = mission.hint
+    ? `📋 MISSION: ${mission.title} - ${mission.objective} | HINT: ${mission.hint}`
+    : `📋 MISSION: ${mission.title} - ${mission.objective}`;
   missionDiv.textContent = missionText;
 }
 
@@ -1415,6 +1613,10 @@ function displayMissionsPanel() {
       <div style="color: #cccccc; font-size: 12px; margin-bottom: 8px;">${mission.description}</div>
       <div style="color: #ffaa00; margin-bottom: 5px;">Objective: ${mission.objective}</div>
   `;
+
+  if (mission.hint) {
+    html += `<div style="color: #66ccff; font-size: 12px; margin-bottom: 8px;">Hint: ${mission.hint}</div>`;
+  }
 
   // Show completed missions
   Object.keys(gameState.completedMissions).forEach((missionId) => {
@@ -1780,6 +1982,7 @@ function getRandomSpamtonIP() {
 // Called on reset to set a new random IP and add it to the database
 function initializeSpamtonIP() {
   gameState.correctIP = getRandomSpamtonIP();
+  factions.spamton.ips = [gameState.correctIP];
 
   // Add Spamton HQ to the available IPs (will be discovered)
   const spamtonEntry = {
@@ -1990,7 +2193,7 @@ function probeIP() {
   addProbeLog(`> Probing ${ip}...`, "info");
 
   setTimeout(() => {
-    const foundIP = allIPs.find((f) => f.ip === ip);
+    const foundIP = getUndiscoveredTargetInfo(ip);
 
     if (foundIP) {
       if (!gameState.discoveredIPs[ip]) {
@@ -2019,6 +2222,8 @@ function probeIP() {
           "success",
         );
       }
+
+      checkMissionProgress();
 
       // Check if this IP was previously hacked without discovery
       if (gameState.suspiciousHacks[ip]) {
@@ -2259,7 +2464,7 @@ function handleAttack(e) {
 
 function executeAttack(ip, attack, attackType) {
   const signature = gameState.discoveredIPs[ip];
-  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
+  const targetInfo = getTargetInfo(ip);
   const ipLower = (ip || "").toLowerCase();
   // Router easter-egg: hacking local router shows fake "No internet" screen
   if (ipLower === "192.168.1.1") {
@@ -2282,9 +2487,7 @@ function executeAttack(ip, attack, attackType) {
   );
   // Check protection from either discovered signature OR from allIPs database
   const protectionNeeded =
-    (signature && signature.protection) ||
-    (allIPsEntry && allIPsEntry.protection) ||
-    0;
+    (targetInfo && targetInfo.protection) || 0;
 
   // Check if protections need to be broken first
   if (protectionNeeded > 0 && totalBreaches < protectionNeeded) {
@@ -2303,7 +2506,8 @@ function executeAttack(ip, attack, attackType) {
     // show fake "Page not found" modal and wait for user action
     showSaruleanModal(() => {
       // On continue: announce across logs and switch to an alternate server
-      const fallback = allIPs[Math.floor(Math.random() * allIPs.length)];
+      const allTargets = getAllTargetEntries();
+      const fallback = allTargets[Math.floor(Math.random() * allTargets.length)];
       const fallbackIP = fallback.ip;
 
       addProbeLog(
@@ -2422,12 +2626,15 @@ function applyDamageToTarget(ip, damage) {
 }
 
 function triggerCounterhack(ip, attack) {
-  const signature = gameState.discoveredIPs[ip];
-  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
+  const serverInfo = getTargetInfo(ip);
 
-  // Check if this is a hacker-type server (discovered or undiscovered)
-  const serverInfo = signature || allIPsEntry;
-  if (!serverInfo || serverInfo.type !== "hacker") {
+  if (!serverInfo) {
+    return;
+  }
+
+  const factionId = getFactionForIP(ip);
+  const canCounterhack = serverInfo.type === "hacker" || serverInfo.type === "faction" || Boolean(factionId);
+  if (!canCounterhack) {
     return;
   }
 
@@ -2563,14 +2770,19 @@ function applyDamageToHPT(damage) {
 }
 
 function updateTargetDisplay(ip) {
+  if (!ip) {
+    document.getElementById("target-name").textContent = "UNKNOWN";
+    document.getElementById("target-health-text").textContent = "0% INTEGRITY";
+    document.getElementById("target-health").style.width = "0%";
+    return;
+  }
+
   const health = gameState.targetHealthByIP[ip] || 0;
   const signature = gameState.discoveredIPs[ip];
+  const targetInfo = getTargetInfo(ip);
 
-  // Also check allIPs in case we're checking a legitimate target that wasn't discovered yet
-  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
-
-  document.getElementById("target-name").textContent = signature
-    ? signature.owner.toUpperCase()
+  document.getElementById("target-name").textContent = targetInfo
+    ? targetInfo.owner.toUpperCase()
     : ip;
   document.getElementById("target-health-text").textContent =
     health + "% INTEGRITY";
@@ -2628,7 +2840,7 @@ function updateTargetDisplay(ip) {
         const suspiciousIPs = Object.keys(gameState.suspiciousHacks);
         const hostNames = suspiciousIPs
           .map((ip) => {
-            const entry = allIPs.find((e) => e.ip === ip);
+            const entry = getTargetInfo(ip);
             return entry ? entry.owner : ip;
           })
           .join(", ");
@@ -2692,12 +2904,12 @@ function updateTargetDisplay(ip) {
     }
 
     // Handle UNDISCOVERED legitimate targets (hacked blind)
-    if (allIPsEntry && allIPsEntry.type === "legitimate") {
+    if (targetInfo && targetInfo.type === "legitimate") {
       const isGoogle =
-        allIPsEntry.owner && allIPsEntry.owner.toLowerCase().includes("google");
+        targetInfo.owner && targetInfo.owner.toLowerCase().includes("google");
       const isCloudflare =
-        allIPsEntry.owner &&
-        allIPsEntry.owner.toLowerCase().includes("cloudflare");
+        targetInfo.owner &&
+        targetInfo.owner.toLowerCase().includes("cloudflare");
 
       if (isCloudflare || isGoogle) {
         // Both Google AND Cloudflare hacked blind: show warning, track it, allow continuation
@@ -2718,14 +2930,14 @@ function updateTargetDisplay(ip) {
       } else {
         // Other legitimate providers hacked blind -> loss
         handleLoss(
-          `CRITICAL ERROR: You destroyed ${allIPsEntry.owner}! They were innocent!`,
+          `CRITICAL ERROR: You destroyed ${targetInfo.owner}! They were innocent!`,
         );
       }
       return;
     }
 
     // Handle undiscovered hacker target (unknown server)
-    if (!signature && !allIPsEntry) {
+    if (!signature && !targetInfo) {
       // Random server destroyed - no consequences
       addHackLog(`✗ Random server destroyed`, "warning");
       return;
@@ -2894,9 +3106,7 @@ function useBreach(e) {
 
   if (gameState.isGameOver) return;
 
-  const signature = gameState.discoveredIPs[ip];
-  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
-  const targetInfo = signature || allIPsEntry;
+  const targetInfo = getTargetInfo(ip);
 
   if (!targetInfo || !targetInfo.protection || targetInfo.protection === 0) {
     addBreachLog(`⚠️ ${ip} has no protection to breach`, "warning");
@@ -2934,11 +3144,7 @@ function useBreach(e) {
 }
 
 function updateBreachTargetInfo(ip) {
-  const signature = gameState.discoveredIPs[ip];
-  const allIPsEntry = allIPs.find((entry) => entry.ip === ip);
-
-  // Use discovered signature if available, otherwise check allIPs
-  const targetInfo = signature || allIPsEntry;
+  const targetInfo = getTargetInfo(ip);
 
   if (!targetInfo) {
     document.getElementById("breach-target-info").innerHTML =
@@ -3115,6 +3321,7 @@ function setSpamtonIP(newIP) {
   }
 
   gameState.correctIP = newIP;
+  factions.spamton.ips = [newIP];
   const spamtonEntry = {
     ip: gameState.correctIP,
     signature: "Spamton HQ - CRITICAL THREAT",
@@ -3212,9 +3419,10 @@ function unlockDevMenu() {
     addDevLog(`Spamton IP: ${gameState.correctIP}`, "info");
   });
   document.getElementById("dev-reveal-all").addEventListener("click", () => {
-    Object.values(allIPs).forEach((ip) => {
+    getAllTargetEntries().forEach((ip) => {
       gameState.discoveredIPs[ip.ip] = ip;
     });
+    checkMissionProgress();
     displaySignatures();
     addDevLog("All IPs revealed in FIND menu", "success");
   });
@@ -3302,7 +3510,9 @@ function handleVictory() {
   autoSave();
 
   // Complete current mission
-  const nextMissionId = completeMission(gameState.currentMissionId);
+  completeMission(gameState.currentMissionId);
+  displayMissionObjective();
+  displayMissionsPanel();
 
   document.querySelector(".container").classList.add("victory");
   updateStatusMessage("🎉 VICTORY! SPAMTON'S HEADQUARTERS DESTROYED! 🎉");
@@ -3375,6 +3585,7 @@ function resetGame() {
     vpn: 0,
     backup: 0,
   };
+  initializeMissions();
 
   // Randomize Spamton's IP
   initializeSpamtonIP();
@@ -3387,6 +3598,7 @@ function resetGame() {
   updateTargetDisplay(null);
   updateDefensesList();
   updateBreachesList();
+  displayMissionObjective();
   updateStatusMessage("Mission reset. Begin reconnaissance...");
 
   document.getElementById("probe-log-output").innerHTML = "";
@@ -3444,22 +3656,4 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeGame);
 } else {
   initializeGame();
-}
-
-function initializeGamee() {
-  initializeJobs();
-  displayJobsPanell();
-}
-const dailyJobss = "error";
-function displayJobsPanell() {
-  initializeJobs();
-}
-function useBreachh() {
-  let stuff;
-}
-function probeIPP() {
-  probeIP();
-}
-function displayDarknetJobsPanell() {
-  let something;
 }
