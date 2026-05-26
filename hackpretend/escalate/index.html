@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Escalate Privileges</title>
+    <style>
+      :root {
+        --bg-a: #12090a;
+        --bg-b: #2a1215;
+        --card: rgba(30, 11, 14, 0.88);
+        --accent: #ff9f1c;
+        --text: #ffe8d6;
+        --muted: #e0b18b;
+        --ok: #8bf7b5;
+        --bad: #ff8080;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+        display: grid;
+        place-items: center;
+        font-family: "Courier New", Courier, monospace;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 85% 15%, rgba(255, 159, 28, 0.2), transparent 45%),
+          linear-gradient(140deg, var(--bg-a), var(--bg-b));
+      }
+
+      .card {
+        width: min(560px, 100%);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        background: var(--card);
+        padding: 22px;
+        box-shadow: 0 0 28px rgba(255, 159, 28, 0.16);
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: clamp(1.3rem, 4vw, 1.9rem);
+      }
+
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+
+      form {
+        display: grid;
+        gap: 10px;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        background: rgba(18, 6, 8, 0.95);
+        color: var(--text);
+        font-size: 1rem;
+      }
+
+      button,
+      .hint {
+        padding: 11px 12px;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        background: linear-gradient(180deg, #5a2b00, #3a1e00);
+        color: var(--text);
+        font-weight: 700;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+      }
+
+      .hint {
+        display: inline-block;
+        margin-top: 8px;
+      }
+
+      .result {
+        min-height: 1.4em;
+        margin-top: 10px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--ok);
+      }
+
+      .bad {
+        color: var(--bad);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>ESCALATION GATEWAY</h1>
+      <p>Secondary authorization required for management controls.</p>
+
+      <form id="escalate-form" autocomplete="off">
+        <label for="escalate-code">ESCALATION CODE</label>
+        <input id="escalate-code" name="escalate-code" type="text" required />
+        <button type="submit">AUTHORIZE</button>
+      </form>
+
+      <a class="hint" href="/error">Password Hint</a>
+      <p id="result" class="result" aria-live="polite"></p>
+    </main>
+
+    <script>
+      const SECRET = "xxxxareoxxxx";
+      const form = document.getElementById("escalate-form");
+      const input = document.getElementById("escalate-code");
+      const result = document.getElementById("result");
+
+      input.addEventListener("input", () => {
+        input.value = input.value.replace(/\s+/g, "");
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const entered = input.value.trim().toLowerCase();
+
+        if (entered === SECRET) {
+          localStorage.setItem("hackpretend_elevated", "1");
+          result.textContent = "PRIVILEGES ESCALATED. REDIRECTING...";
+          result.className = "result ok";
+          setTimeout(() => {
+            window.location.href = "/hackpretend";
+          }, 500);
+        } else {
+          result.textContent = "AUTHORIZATION FAILED";
+          result.className = "result bad";
+        }
+      });
+    </script>
+  </body>
+</html>

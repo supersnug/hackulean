@@ -142,6 +142,31 @@
         letter-spacing: 1px;
       }
 
+      .admin-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .escalate-btn {
+        display: inline-block;
+        text-decoration: none;
+        text-align: center;
+        padding: 9px 12px;
+        border: 1px solid var(--accent-2);
+        border-radius: 8px;
+        background: linear-gradient(180deg, #503200, #2e1d00);
+        color: #ffd9a6;
+        font-size: 0.84rem;
+        font-weight: 700;
+      }
+
+      .escalate-btn:hover {
+        filter: brightness(1.1);
+      }
+
       .admin-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -166,6 +191,25 @@
         color: var(--muted);
         font-size: 0.84rem;
         line-height: 1.4;
+      }
+
+      .manage-btn {
+        margin-top: 8px;
+        width: 100%;
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .manage-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .lock-icon {
+        font-size: 1rem;
+        margin-left: 8px;
       }
 
       .admin-status {
@@ -194,31 +238,58 @@
       <p id="result" class="result" aria-live="polite"></p>
 
       <section id="admin-panel" class="admin-shell hidden" aria-live="polite">
-        <h2 class="admin-title">ADMIN PRETEND OPTIONS UNLOCKED</h2>
+        <div class="admin-topbar">
+          <h2 class="admin-title">ADMIN PRETEND OPTIONS UNLOCKED</h2>
+          <a class="escalate-btn" href="/hackpretend/escalate">ESCALATE PRIVELAGES</a>
+        </div>
         <div class="admin-grid">
           <article class="admin-option">
             <h3>UNIVERSE NODE CONTROL</h3>
             <p>Review and stage pretend node reboots across connected sectors.</p>
+            <button class="manage-btn" disabled>
+              MANAGE
+              <span class="lock-icon">🔒</span>
+            </button>
           </article>
           <article class="admin-option">
             <h3>REVIVAL CYCLE MANAGER</h3>
             <p>Queue, pause, and resume universe revival timelines.</p>
+            <button class="manage-btn" disabled>
+              MANAGE
+              <span class="lock-icon">🔒</span>
+            </button>
           </article>
           <article class="admin-option">
             <h3>FACTION TRUST OVERRIDE</h3>
             <p>Adjust reputation bands for test scenarios and route checks.</p>
+            <button class="manage-btn" disabled>
+              MANAGE
+              <span class="lock-icon">🔒</span>
+            </button>
           </article>
           <article class="admin-option">
             <h3>ARCHIVE RESTORE TERMINAL</h3>
             <p>Load archived pretend states for narrative continuity testing.</p>
+            <button class="manage-btn" disabled>
+              MANAGE
+              <span class="lock-icon">🔒</span>
+            </button>
           </article>
           <article class="admin-option">
             <h3>SIMULATION DRIFT SCAN</h3>
             <p>Run diagnostics for timeline drift and lore inconsistencies.</p>
+            <button class="manage-btn" disabled>
+              MANAGE
+              <span class="lock-icon">🔒</span>
+            </button>
           </article>
           <article class="admin-option">
             <h3>ADMIN ANNOUNCEMENT BUS</h3>
             <p>Broadcast system-wide pretend notices to universe operators.</p>
+            <button class="manage-btn" disabled>
+              MANAGE
+              <span class="lock-icon">🔒</span>
+            </button>
           </article>
         </div>
         <p id="admin-status" class="admin-status">SYSTEM STATUS: STANDBY</p>
@@ -233,6 +304,23 @@
       const clue = document.getElementById("clue");
       const adminPanel = document.getElementById("admin-panel");
       const adminStatus = document.getElementById("admin-status");
+      const manageButtons = document.querySelectorAll(".manage-btn");
+
+      function applyPrivilegeState() {
+        const elevated = localStorage.getItem("hackpretend_elevated") === "1";
+
+        manageButtons.forEach((btn) => {
+          const icon = btn.querySelector(".lock-icon");
+          btn.disabled = !elevated;
+          if (icon) {
+            icon.textContent = elevated ? "🔓" : "🔒";
+          }
+        });
+
+        adminStatus.textContent = elevated
+          ? "SYSTEM STATUS: AUTHENTICATED - ELEVATED MANAGEMENT ENABLED"
+          : "SYSTEM STATUS: AUTHENTICATED - MANAGEMENT LOCKED";
+      }
 
       input.addEventListener("keydown", (event) => {
         if (event.key === " ") {
@@ -254,8 +342,7 @@
           form.classList.add("hidden");
           clue.classList.add("hidden");
           adminPanel.classList.remove("hidden");
-          adminStatus.textContent =
-            "SYSTEM STATUS: AUTHENTICATED - ADMIN PRETEND MODULES AVAILABLE";
+          applyPrivilegeState();
         } else {
           result.textContent = "ACCESS DENIED";
           result.className = "result bad";
