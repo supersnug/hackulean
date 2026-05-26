@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hack Pretend</title>
+    <style>
+      :root {
+        --bg-1: #07121f;
+        --bg-2: #111827;
+        --grid: rgba(46, 196, 182, 0.12);
+        --card: rgba(4, 17, 29, 0.86);
+        --accent: #2ec4b6;
+        --accent-2: #ff9f1c;
+        --ok: #7ef29a;
+        --bad: #ff6b6b;
+        --text: #e6f6ff;
+        --muted: #8eb7c8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: var(--text);
+        font-family: "Courier New", Courier, monospace;
+        background:
+          linear-gradient(90deg, transparent 24%, var(--grid) 25%, var(--grid) 26%, transparent 27%, transparent 74%, var(--grid) 75%, var(--grid) 76%, transparent 77%),
+          linear-gradient(0deg, transparent 24%, var(--grid) 25%, var(--grid) 26%, transparent 27%, transparent 74%, var(--grid) 75%, var(--grid) 76%, transparent 77%),
+          radial-gradient(circle at 18% 18%, #17324a 0%, transparent 45%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        background-size: 46px 46px, 46px 46px, auto, auto;
+      }
+
+      .panel {
+        width: min(720px, 100%);
+        background: var(--card);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 0 30px rgba(46, 196, 182, 0.22);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        letter-spacing: 2px;
+        font-size: clamp(1.5rem, 4.6vw, 2.1rem);
+      }
+
+      .sub {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 0.96rem;
+      }
+
+      .clue {
+        margin: 0 0 18px;
+        padding: 12px;
+        border-left: 3px solid var(--accent-2);
+        background: rgba(255, 159, 28, 0.08);
+        color: #ffd8a7;
+        line-height: 1.45;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+      }
+
+      form {
+        display: grid;
+        gap: 10px;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        background: rgba(6, 27, 44, 0.9);
+        color: var(--text);
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(46, 196, 182, 0.35);
+      }
+
+      button {
+        padding: 12px 14px;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        background: linear-gradient(180deg, #0f3c44, #0c2f35);
+        color: var(--text);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        filter: brightness(1.12);
+      }
+
+      .result {
+        min-height: 1.4em;
+        margin: 6px 0 0;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--ok);
+      }
+
+      .bad {
+        color: var(--bad);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel">
+      <h1>HACK PRETEND</h1>
+      <p class="sub">Enter the revival code.</p>
+
+      <p class="clue">
+        This universe was called the AI Pretend at one point. The Hack Pretend has been "revived" many times. Besides the AI Pretend, what was one of these "revivals" names?
+      </p>
+
+      <form id="code-form" autocomplete="off">
+        <label for="code-input">CODE</label>
+        <input id="code-input" name="code" type="text" spellcheck="false" required />
+        <button type="submit">VERIFY</button>
+      </form>
+
+      <p id="result" class="result" aria-live="polite"></p>
+    </main>
+
+    <script>
+      const ANSWER = "DEVICEPRETEND";
+      const form = document.getElementById("code-form");
+      const input = document.getElementById("code-input");
+      const result = document.getElementById("result");
+
+      input.addEventListener("input", () => {
+        input.value = input.value.toUpperCase();
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const entered = input.value.trim().toUpperCase();
+
+        if (entered === ANSWER) {
+          result.textContent = "ACCESS GRANTED";
+          result.className = "result ok";
+        } else {
+          result.textContent = "ACCESS DENIED";
+          result.className = "result bad";
+        }
+      });
+    </script>
+  </body>
+</html>
