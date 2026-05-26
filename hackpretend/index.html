@@ -212,6 +212,37 @@
         margin-left: 8px;
       }
 
+      .fake-menu {
+        display: none;
+        margin-top: 8px;
+        border: 1px solid rgba(46, 196, 182, 0.5);
+        border-radius: 8px;
+        background: rgba(4, 22, 34, 0.92);
+        padding: 8px;
+      }
+
+      .fake-menu.visible {
+        display: block;
+      }
+
+      .fake-menu h4 {
+        margin: 0 0 6px;
+        font-size: 0.8rem;
+        color: #c9f7ff;
+      }
+
+      .fake-menu-item {
+        margin: 0;
+        padding: 6px 0;
+        font-size: 0.78rem;
+        color: #9ed5e7;
+        border-top: 1px dashed rgba(46, 196, 182, 0.24);
+      }
+
+      .fake-menu-item:first-of-type {
+        border-top: 0;
+      }
+
       .admin-status {
         margin-top: 12px;
         color: #bdeeff;
@@ -250,6 +281,12 @@
               MANAGE
               <span class="lock-icon">🔒</span>
             </button>
+            <div class="fake-menu" role="menu" aria-label="Universe Node Control menu">
+              <h4>NODE CONTROL MENU</h4>
+              <p class="fake-menu-item">- Queue node reboot wave</p>
+              <p class="fake-menu-item">- Suspend unstable sector relay</p>
+              <p class="fake-menu-item">- Sync mirror node checkpoints</p>
+            </div>
           </article>
           <article class="admin-option">
             <h3>REVIVAL CYCLE MANAGER</h3>
@@ -258,6 +295,12 @@
               MANAGE
               <span class="lock-icon">🔒</span>
             </button>
+            <div class="fake-menu" role="menu" aria-label="Revival Cycle Manager menu">
+              <h4>REVIVAL CYCLE MENU</h4>
+              <p class="fake-menu-item">- Start cycle phase bootstrap</p>
+              <p class="fake-menu-item">- Pause active revival thread</p>
+              <p class="fake-menu-item">- Export cycle audit snapshot</p>
+            </div>
           </article>
           <article class="admin-option">
             <h3>FACTION TRUST OVERRIDE</h3>
@@ -266,6 +309,12 @@
               MANAGE
               <span class="lock-icon">🔒</span>
             </button>
+            <div class="fake-menu" role="menu" aria-label="Faction Trust Override menu">
+              <h4>TRUST OVERRIDE MENU</h4>
+              <p class="fake-menu-item">- Set faction trust floor</p>
+              <p class="fake-menu-item">- Apply route bias preset</p>
+              <p class="fake-menu-item">- Reset reputation ledger</p>
+            </div>
           </article>
           <article class="admin-option">
             <h3>ARCHIVE RESTORE TERMINAL</h3>
@@ -274,6 +323,12 @@
               MANAGE
               <span class="lock-icon">🔒</span>
             </button>
+            <div class="fake-menu" role="menu" aria-label="Archive Restore Terminal menu">
+              <h4>ARCHIVE RESTORE MENU</h4>
+              <p class="fake-menu-item">- Mount archive branch</p>
+              <p class="fake-menu-item">- Restore timeline checkpoint</p>
+              <p class="fake-menu-item">- Diff active and archive states</p>
+            </div>
           </article>
           <article class="admin-option">
             <h3>SIMULATION DRIFT SCAN</h3>
@@ -282,6 +337,12 @@
               MANAGE
               <span class="lock-icon">🔒</span>
             </button>
+            <div class="fake-menu" role="menu" aria-label="Simulation Drift Scan menu">
+              <h4>DRIFT SCAN MENU</h4>
+              <p class="fake-menu-item">- Run continuity drift sweep</p>
+              <p class="fake-menu-item">- Validate canon anchors</p>
+              <p class="fake-menu-item">- Publish anomaly digest</p>
+            </div>
           </article>
           <article class="admin-option">
             <h3>ADMIN ANNOUNCEMENT BUS</h3>
@@ -290,6 +351,12 @@
               MANAGE
               <span class="lock-icon">🔒</span>
             </button>
+            <div class="fake-menu" role="menu" aria-label="Admin Announcement Bus menu">
+              <h4>ANNOUNCEMENT BUS MENU</h4>
+              <p class="fake-menu-item">- Draft universe operator bulletin</p>
+              <p class="fake-menu-item">- Pin emergency notice</p>
+              <p class="fake-menu-item">- Flush stale broadcast queue</p>
+            </div>
           </article>
         </div>
         <p id="admin-status" class="admin-status">SYSTEM STATUS: STANDBY</p>
@@ -305,6 +372,11 @@
       const adminPanel = document.getElementById("admin-panel");
       const adminStatus = document.getElementById("admin-status");
       const manageButtons = document.querySelectorAll(".manage-btn");
+      const fakeMenus = document.querySelectorAll(".fake-menu");
+
+      function closeAllMenus() {
+        fakeMenus.forEach((menu) => menu.classList.remove("visible"));
+      }
 
       function applyPrivilegeState() {
         const elevated = localStorage.getItem("hackpretend_elevated") === "1";
@@ -317,10 +389,37 @@
           }
         });
 
+        if (!elevated) {
+          closeAllMenus();
+        }
+
         adminStatus.textContent = elevated
           ? "SYSTEM STATUS: AUTHENTICATED - ELEVATED MANAGEMENT ENABLED"
           : "SYSTEM STATUS: AUTHENTICATED - MANAGEMENT LOCKED";
       }
+
+      manageButtons.forEach((btn, index) => {
+        btn.addEventListener("click", () => {
+          if (btn.disabled) {
+            return;
+          }
+
+          const menu = fakeMenus[index];
+          const willOpen = !menu.classList.contains("visible");
+
+          closeAllMenus();
+          if (willOpen) {
+            menu.classList.add("visible");
+            const title =
+              btn.closest(".admin-option")?.querySelector("h3")?.textContent ||
+              "MANAGEMENT MODULE";
+            adminStatus.textContent = `SYSTEM STATUS: ELEVATED - ${title} MENU OPEN`;
+          } else {
+            adminStatus.textContent =
+              "SYSTEM STATUS: AUTHENTICATED - ELEVATED MANAGEMENT ENABLED";
+          }
+        });
+      });
 
       input.addEventListener("keydown", (event) => {
         if (event.key === " ") {
