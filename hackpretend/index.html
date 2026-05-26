@@ -167,6 +167,11 @@
         filter: brightness(1.1);
       }
 
+      .escalate-btn:disabled {
+        cursor: pointer;
+        opacity: 1;
+      }
+
       .admin-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -271,7 +276,9 @@
       <section id="admin-panel" class="admin-shell hidden" aria-live="polite">
         <div class="admin-topbar">
           <h2 class="admin-title">ADMIN PRETEND OPTIONS UNLOCKED</h2>
-          <a class="escalate-btn" href="/hackpretend/escalate">ESCALATE PRIVELAGES</a>
+          <button id="privilege-toggle" class="escalate-btn" type="button">
+            ESCALATE PRIVELAGES
+          </button>
         </div>
         <div class="admin-grid">
           <article class="admin-option">
@@ -371,6 +378,7 @@
       const clue = document.getElementById("clue");
       const adminPanel = document.getElementById("admin-panel");
       const adminStatus = document.getElementById("admin-status");
+      const privilegeToggle = document.getElementById("privilege-toggle");
       const manageButtons = document.querySelectorAll(".manage-btn");
       const fakeMenus = document.querySelectorAll(".fake-menu");
 
@@ -397,6 +405,29 @@
           ? "SYSTEM STATUS: AUTHENTICATED - ELEVATED MANAGEMENT ENABLED"
           : "SYSTEM STATUS: AUTHENTICATED - MANAGEMENT LOCKED";
       }
+
+      function syncPrivilegeToggle() {
+        const elevated = localStorage.getItem("hackpretend_elevated") === "1";
+        privilegeToggle.textContent = elevated
+          ? "DE-ESCALATE PRIVILAGES"
+          : "ESCALATE PRIVELAGES";
+      }
+
+      privilegeToggle.addEventListener("click", () => {
+        const elevated = localStorage.getItem("hackpretend_elevated") === "1";
+
+        if (elevated) {
+          localStorage.removeItem("hackpretend_elevated");
+          closeAllMenus();
+          applyPrivilegeState();
+          syncPrivilegeToggle();
+          result.textContent = "PRIVILEGES DE-ESCALATED";
+          result.className = "result bad";
+          return;
+        }
+
+        window.location.href = "/hackpretend/escalate";
+      });
 
       manageButtons.forEach((btn, index) => {
         btn.addEventListener("click", () => {
@@ -442,11 +473,14 @@
           clue.classList.add("hidden");
           adminPanel.classList.remove("hidden");
           applyPrivilegeState();
+          syncPrivilegeToggle();
         } else {
           result.textContent = "ACCESS DENIED";
           result.className = "result bad";
         }
       });
+
+      syncPrivilegeToggle();
     </script>
   </body>
 </html>
