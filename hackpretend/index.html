@@ -322,17 +322,18 @@
 
       .incoming-alert {
         position: fixed;
-        top: 24px;
-        left: 50%;
-        transform: translateX(-50%);
+        inset: 0;
         z-index: 9999;
-        border: 1px solid #ff5b5b;
-        background: rgba(70, 0, 0, 0.95);
+        border: 0;
+        background: rgba(45, 0, 0, 0.96);
         color: #ff6b6b;
-        padding: 10px 16px;
-        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        text-align: center;
+        font-size: clamp(1.6rem, 6vw, 3.4rem);
         font-weight: 700;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.3s ease;
@@ -540,6 +541,9 @@
         incidentTriggered = true;
 
         incomingAlert.classList.add("show");
+        setTimeout(() => {
+          incomingAlert.classList.remove("show");
+        }, 3000);
 
         const fadeTargets = [adminTopbar, ...adminOptions];
         fadeTargets.forEach((target, i) => {
@@ -551,6 +555,7 @@
         setTimeout(
           () => {
             systemLog.classList.add("fullscreen");
+            enableInternetBtn.remove();
             typeChatMessage("CONNECTION ESTABLISHED.");
           },
           fadeTargets.length * 260 + 500,
