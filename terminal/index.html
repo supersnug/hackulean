@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Terminal Access</title>
+    <script>
+      const OUTAGE_KEY = "hackulean_server_unavailable";
+      if (localStorage.getItem(OUTAGE_KEY) === "1") {
+        window.location.replace("/error");
+      }
+    </script>
     <style>
       :root {
         --bg: #04070c;
@@ -203,12 +209,13 @@
           </div>
         </section>
 
-        <p class="hint">Commands: help, ls, cat, whoami, pwd, uname, date, echo, clear, exit</p>
+        <p class="hint">Commands: help, ls, cat, whoami, pwd, uname, date, echo, send_data, clear, exit</p>
       </div>
     </main>
 
     <script>
       const ACCESS_CODE = "TERM-1A07-9JTB";
+      const DATA_LIMIT = 1000000000;
       const gate = document.getElementById("gate");
       const gateForm = document.getElementById("gate-form");
       const gateInput = document.getElementById("gate-input");
@@ -225,6 +232,13 @@
         output.scrollTop = output.scrollHeight;
       }
 
+      function simulateLag(ms = 1400) {
+        const start = performance.now();
+        while (performance.now() - start < ms) {
+          // Intentional short freeze to simulate terminal lag.
+        }
+      }
+
       function runCommand(raw) {
         const input = raw.trim();
         if (!input) return;
@@ -236,7 +250,8 @@
 
         switch (command) {
           case "help":
-            appendLine("Available commands: help, ls, cat, whoami, pwd, uname, date, echo, clear, exit");
+            appendLine("Available commands: help, ls, cat, whoami, pwd, uname, date, echo, send_data, clear, exit");
+            appendLine("Warning: Do not send over 1000000000 data!");
             appendLine("Tip: try cat briefing.txt");
             break;
           case "ls":
@@ -269,6 +284,33 @@
           case "echo":
             appendLine(args.join(" "));
             break;
+          case "send_data": {
+            const amount = Number(args[0]);
+            if (!args[0]) {
+              appendLine("usage: send_data <amount>");
+              break;
+            }
+
+            if (!Number.isFinite(amount)) {
+              appendLine("send_data: invalid amount");
+              break;
+            }
+
+            if (amount > DATA_LIMIT) {
+              appendLine(`Warning: payload ${amount} exceeds safe limit ${DATA_LIMIT}.`);
+              appendLine("Relay congestion detected... terminal is lagging.");
+              simulateLag();
+              localStorage.setItem(OUTAGE_KEY, "1");
+              appendLine("Critical failure: Server Not Available");
+              setTimeout(() => {
+                window.location.replace("/error");
+              }, 200);
+              break;
+            }
+
+            appendLine(`Data payload ${amount} sent successfully.`);
+            break;
+          }
           case "clear":
             output.textContent = "";
             break;

@@ -57,15 +57,54 @@
         border-radius: 8px;
         padding: 10px 12px;
       }
+
+      body.outage-mode {
+        --bg: #060b12;
+        --panel: rgba(6, 18, 30, 0.92);
+        --accent: #51d1ff;
+        --text: #dff6ff;
+        --muted: #9cd8ef;
+        background:
+          linear-gradient(90deg, transparent 24%, rgba(81, 209, 255, 0.1) 25%, rgba(81, 209, 255, 0.1) 26%, transparent 27%, transparent 74%, rgba(81, 209, 255, 0.1) 75%, rgba(81, 209, 255, 0.1) 76%, transparent 77%),
+          linear-gradient(0deg, transparent 24%, rgba(81, 209, 255, 0.1) 25%, rgba(81, 209, 255, 0.1) 26%, transparent 27%, transparent 74%, rgba(81, 209, 255, 0.1) 75%, rgba(81, 209, 255, 0.1) 76%, transparent 77%),
+          radial-gradient(circle at 65% 12%, rgba(81, 209, 255, 0.18), transparent 52%),
+          var(--bg);
+        background-size: 44px 44px, 44px 44px, auto, auto;
+      }
+
+      body.outage-mode .panel {
+        box-shadow: 0 0 30px rgba(81, 209, 255, 0.2);
+      }
     </style>
   </head>
   <body>
     <main class="panel">
-      <h1>SERVER RESOURCES UNAVAILABLE</h1>
-      <p>Unable to fetch password hint resources at this time.</p>
-      <p>Reason: remote archive index is in a restricted maintenance cycle.</p>
-      <p>Error code: JjGztcKs</p>
-      <a href="/hackpretend/escalate">Return to Escalation Gateway</a>
+      <h1 id="error-title">SERVER RESOURCES UNAVAILABLE</h1>
+      <p id="error-line-1">Unable to fetch password hint resources at this time.</p>
+      <p id="error-line-2">Reason: remote archive index is in a restricted maintenance cycle.</p>
+      <p id="error-code">Error code: JjGztcKs</p>
+      <a id="error-link" href="/hackpretend/escalate">Return to Escalation Gateway</a>
     </main>
+
+    <script>
+      const outageActive = localStorage.getItem("hackulean_server_unavailable") === "1";
+
+      if (outageActive) {
+        document.body.classList.add("outage-mode");
+
+        const title = document.getElementById("error-title");
+        const line1 = document.getElementById("error-line-1");
+        const line2 = document.getElementById("error-line-2");
+        const code = document.getElementById("error-code");
+        const link = document.getElementById("error-link");
+
+        title.textContent = "SERVER NOT AVAILABLE";
+        line1.textContent = "Critical relay saturation detected from oversized data transfer.";
+        line2.textContent = "All linked endpoints are temporarily unavailable until reset.";
+        code.textContent = "Error code: ";
+        link.textContent = "";
+        link.href = "/error";
+      }
+    </script>
   </body>
 </html>

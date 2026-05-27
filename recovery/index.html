@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>System Recovery Console</title>
+    <style>
+      :root {
+        --bg-1: #08131d;
+        --bg-2: #111d2d;
+        --grid: rgba(110, 228, 255, 0.1);
+        --card: rgba(6, 18, 30, 0.92);
+        --accent: #6ee4ff;
+        --accent-2: #ffcf66;
+        --ok: #9cf7b8;
+        --bad: #ff8d8d;
+        --text: #e6f7ff;
+        --muted: #9ec2d4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: var(--text);
+        font-family: "Courier New", Courier, monospace;
+        background:
+          linear-gradient(90deg, transparent 24%, var(--grid) 25%, var(--grid) 26%, transparent 27%, transparent 74%, var(--grid) 75%, var(--grid) 76%, transparent 77%),
+          linear-gradient(0deg, transparent 24%, var(--grid) 25%, var(--grid) 26%, transparent 27%, transparent 74%, var(--grid) 75%, var(--grid) 76%, transparent 77%),
+          radial-gradient(circle at 14% 16%, rgba(110, 228, 255, 0.22), transparent 44%),
+          linear-gradient(140deg, var(--bg-1), var(--bg-2));
+        background-size: 46px 46px, 46px 46px, auto, auto;
+      }
+
+      .panel {
+        width: min(720px, 100%);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        background: var(--card);
+        box-shadow: 0 0 30px rgba(110, 228, 255, 0.18);
+        padding: 24px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        letter-spacing: 1px;
+        font-size: clamp(1.4rem, 4.8vw, 2.1rem);
+      }
+
+      .sub {
+        margin: 0 0 18px;
+        color: var(--muted);
+      }
+
+      .warn {
+        margin: 0 0 16px;
+        padding: 10px 12px;
+        border-left: 3px solid var(--accent-2);
+        background: rgba(255, 207, 102, 0.08);
+        color: #ffe3a8;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      button {
+        padding: 11px 14px;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        background: linear-gradient(180deg, #153344, #102535);
+        color: var(--text);
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+      }
+
+      button:hover {
+        filter: brightness(1.1);
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .status {
+        min-height: 1.4em;
+        margin-top: 12px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--ok);
+      }
+
+      .bad {
+        color: var(--bad);
+      }
+
+      .success-screen {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 24px;
+        font-family: "Courier New", Courier, monospace;
+        color: #e7fff2;
+        background:
+          radial-gradient(circle at 20% 20%, rgba(156, 247, 184, 0.2), transparent 42%),
+          linear-gradient(140deg, #0a1a14, #10231a);
+      }
+
+      .success-screen h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 6vw, 2.8rem);
+        letter-spacing: 1px;
+      }
+
+      .success-screen p {
+        margin: 12px 0 0;
+        max-width: 760px;
+        line-height: 1.5;
+        color: #c8f3dc;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel">
+      <h1>RECOVERY CONSOLE</h1>
+      <p class="sub">Emergency route. This page remains available during outage state.</p>
+      <p class="warn">Required order: Restart Server, then Reload Safety Checks.</p>
+
+      <div class="controls">
+        <button id="restart-btn" type="button">Restart Server</button>
+        <button id="reload-btn" type="button">Reload Safety Checks</button>
+      </div>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script>
+      const restartBtn = document.getElementById("restart-btn");
+      const reloadBtn = document.getElementById("reload-btn");
+      const status = document.getElementById("status");
+
+      let restarted = false;
+
+      restartBtn.addEventListener("click", () => {
+        restarted = true;
+        restartBtn.disabled = true;
+        status.textContent = "Server restart staged. Now reload safety checks.";
+        status.className = "status ok";
+      });
+
+      reloadBtn.addEventListener("click", () => {
+        if (!restarted) {
+          status.textContent = "Restart Server must be run first.";
+          status.className = "status bad";
+          return;
+        }
+
+        localStorage.clear();
+        sessionStorage.clear();
+
+        document.body.className = "success-screen";
+        document.body.innerHTML =
+          "<div><h1>Congratulations on solving the puzzle</h1><p>You solved various ciphers, crashed the server to stop a hacker from getting in, and then restored it to keep it running!</p></div>";
+      });
+    </script>
+  </body>
+</html>
