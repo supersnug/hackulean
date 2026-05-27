@@ -538,6 +538,7 @@
       const chatInput = document.getElementById("chat-input");
       const enableInternetBtn = document.getElementById("enable-internet");
       const incomingAlert = document.getElementById("incoming-alert");
+      const LOGOUT_LOCK_KEY = "hackpretend_logged_out";
 
       let internetBooting = false;
       let incidentTriggered = false;
@@ -616,6 +617,7 @@
       }
 
       function restoreLoginPrompt() {
+        localStorage.setItem(LOGOUT_LOCK_KEY, "1");
         localStorage.removeItem("hackpretend_elevated");
         closeAllMenus();
         applyPrivilegeState();
@@ -641,6 +643,16 @@
         input.placeholder = "LOCKED";
         result.textContent = "LOGGED OUT";
         result.className = "result bad";
+      }
+
+      function applyPersistentLogoutState() {
+        if (localStorage.getItem(LOGOUT_LOCK_KEY) !== "1") {
+          return;
+        }
+
+        restoreLoginPrompt();
+        partThreeMessage.classList.remove("hidden");
+        partThreeMessage.textContent = "Welcome to Part Three. https://sarulean.com/partthree";
       }
 
       async function runDeleteCompletionFlow() {
@@ -884,6 +896,7 @@
       });
 
       syncPrivilegeToggle();
+      applyPersistentLogoutState();
 
       if (!logOutput.hasChildNodes()) {
         appendLog("[SYS] Incident log standby. Awaiting access handshake...");
