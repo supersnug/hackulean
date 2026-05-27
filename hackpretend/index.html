@@ -382,7 +382,7 @@
         <div class="admin-topbar">
           <h2 class="admin-title">ADMIN PRETEND OPTIONS UNLOCKED</h2>
           <button id="privilege-toggle" class="escalate-btn" type="button">
-            ESCALATE PRIVELAGES
+            ESCALATE PRIVILEGES
           </button>
         </div>
         <div class="admin-grid">
@@ -580,8 +580,8 @@
       function syncPrivilegeToggle() {
         const elevated = localStorage.getItem("hackpretend_elevated") === "1";
         privilegeToggle.textContent = elevated
-          ? "DE-ESCALATE PRIVILAGES"
-          : "ESCALATE PRIVELAGES";
+          ? "DE-ESCALATE PRIVILEGES"
+          : "ESCALATE PRIVILEGES";
       }
 
       privilegeToggle.addEventListener("click", () => {
