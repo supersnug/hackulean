@@ -397,6 +397,7 @@
       </form>
 
       <p id="result" class="result" aria-live="polite"></p>
+      <p id="part-three-message" class="sub hidden" aria-live="polite"></p>
 
       <section id="admin-panel" class="admin-shell hidden" aria-live="polite">
         <div class="admin-topbar">
@@ -521,7 +522,9 @@
       const form = document.getElementById("code-form");
       const input = document.getElementById("code-input");
       const result = document.getElementById("result");
+      const partThreeMessage = document.getElementById("part-three-message");
       const clue = document.getElementById("clue");
+      const verifyButton = form.querySelector('button[type="submit"]');
       const adminPanel = document.getElementById("admin-panel");
       const adminStatus = document.getElementById("admin-status");
       const privilegeToggle = document.getElementById("privilege-toggle");
@@ -578,6 +581,16 @@
         return new Promise((resolve) => setTimeout(resolve, ms));
       }
 
+      async function typePanelMessage(element, message, charDelay = 38) {
+        element.textContent = "";
+        element.classList.remove("hidden");
+
+        for (let i = 0; i < message.length; i++) {
+          element.textContent += message[i];
+          await wait(charDelay);
+        }
+      }
+
       async function playTakeoverChatScript() {
         let duration = typeChatMessage("CONNECTION ESTABLISHED.");
         await wait(duration + 400);
@@ -611,14 +624,21 @@
         form.classList.remove("hidden");
         clue.classList.remove("hidden");
         adminPanel.classList.add("hidden");
+        systemLog.classList.add("hidden");
         systemLog.classList.remove("fullscreen");
         chatForm.classList.add("hidden");
+        partThreeMessage.classList.add("hidden");
+        partThreeMessage.textContent = "";
 
         const fadeTargets = [adminTopbar, ...adminOptions];
         fadeTargets.forEach((target) => target.classList.remove("fade-out"));
 
         input.value = "";
-        input.focus();
+        input.disabled = true;
+        if (verifyButton) {
+          verifyButton.disabled = true;
+        }
+        input.placeholder = "LOCKED";
         result.textContent = "LOGGED OUT";
         result.className = "result bad";
       }
@@ -641,7 +661,10 @@
         await wait(duration + 500);
 
         restoreLoginPrompt();
-        typeChatMessage("Welcome to Part Three. https://sarulean.com/partthree");
+        await typePanelMessage(
+          partThreeMessage,
+          "Welcome to Part Three. https://sarulean.com/partthree",
+        );
       }
 
       async function evaluateChatMessage(message) {
