@@ -253,6 +253,111 @@
         color: #bdeeff;
         font-size: 0.9rem;
       }
+
+      .admin-topbar,
+      .admin-option {
+        transition: opacity 0.6s ease, transform 0.6s ease;
+      }
+
+      .fade-out {
+        opacity: 0;
+        transform: translateY(-6px);
+        pointer-events: none;
+      }
+
+      .log-shell {
+        margin-top: 16px;
+        border: 1px solid rgba(46, 196, 182, 0.5);
+        border-radius: 10px;
+        background: rgba(2, 14, 22, 0.92);
+        padding: 12px;
+      }
+
+      .log-head {
+        margin: 0 0 8px;
+        color: #b8f4ff;
+        font-size: 0.86rem;
+        letter-spacing: 1px;
+      }
+
+      .log-output {
+        min-height: 150px;
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid rgba(46, 196, 182, 0.3);
+        border-radius: 8px;
+        background: rgba(0, 10, 16, 0.95);
+        padding: 8px;
+      }
+
+      .log-entry {
+        margin: 0;
+        font-size: 0.8rem;
+        line-height: 1.45;
+        color: #b0d4e2;
+        white-space: pre-wrap;
+      }
+
+      .log-entry + .log-entry {
+        margin-top: 4px;
+      }
+
+      .log-error {
+        color: #ff8f8f;
+      }
+
+      .log-ok {
+        color: #8ff0b4;
+      }
+
+      .log-chat {
+        color: #e8f9ff;
+      }
+
+      .enable-btn {
+        margin-top: 10px;
+        border-color: #7ef29a;
+        background: linear-gradient(180deg, #0f4e2d, #0a3520);
+      }
+
+      .incoming-alert {
+        position: fixed;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        border: 1px solid #ff5b5b;
+        background: rgba(70, 0, 0, 0.95);
+        color: #ff6b6b;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .incoming-alert.show {
+        opacity: 1;
+      }
+
+      .log-shell.fullscreen {
+        position: fixed;
+        inset: 0;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        z-index: 8000;
+        padding: 16px;
+        background: rgba(0, 0, 0, 0.98);
+      }
+
+      .log-shell.fullscreen .log-output {
+        min-height: calc(100vh - 84px);
+        max-height: calc(100vh - 84px);
+        border-color: rgba(255, 92, 92, 0.45);
+      }
     </style>
   </head>
   <body>
@@ -368,7 +473,17 @@
         </div>
         <p id="admin-status" class="admin-status">SYSTEM STATUS: STANDBY</p>
       </section>
+
+      <section id="system-log" class="log-shell hidden" aria-live="polite">
+        <h3 class="log-head">SYSTEM INCIDENT LOG</h3>
+        <div id="log-output" class="log-output"></div>
+        <button id="enable-internet" class="enable-btn hidden" type="button">
+          ENABLE INTERNET
+        </button>
+      </section>
     </main>
+
+    <div id="incoming-alert" class="incoming-alert">INCOMING CONNECTION</div>
 
     <script>
       const ANSWER = "DEVICEPRETEND";
@@ -381,9 +496,65 @@
       const privilegeToggle = document.getElementById("privilege-toggle");
       const manageButtons = document.querySelectorAll(".manage-btn");
       const fakeMenus = document.querySelectorAll(".fake-menu");
+      const adminTopbar = document.querySelector(".admin-topbar");
+      const adminOptions = document.querySelectorAll(".admin-option");
+      const systemLog = document.getElementById("system-log");
+      const logOutput = document.getElementById("log-output");
+      const enableInternetBtn = document.getElementById("enable-internet");
+      const incomingAlert = document.getElementById("incoming-alert");
+
+      let internetBooting = false;
+      let incidentTriggered = false;
 
       function closeAllMenus() {
         fakeMenus.forEach((menu) => menu.classList.remove("visible"));
+      }
+
+      function appendLog(message, type = "") {
+        const line = document.createElement("p");
+        line.className = `log-entry ${type}`.trim();
+        line.textContent = message;
+        logOutput.appendChild(line);
+        logOutput.scrollTop = logOutput.scrollHeight;
+      }
+
+      function typeChatMessage(message, prefix = "[CHAT] ") {
+        const line = document.createElement("p");
+        line.className = "log-entry log-chat";
+        line.textContent = prefix;
+        logOutput.appendChild(line);
+
+        let index = 0;
+        const timer = setInterval(() => {
+          line.textContent += message[index] || "";
+          index++;
+          logOutput.scrollTop = logOutput.scrollHeight;
+          if (index >= message.length) {
+            clearInterval(timer);
+          }
+        }, 70);
+      }
+
+      function beginTakeoverSequence() {
+        if (incidentTriggered) return;
+        incidentTriggered = true;
+
+        incomingAlert.classList.add("show");
+
+        const fadeTargets = [adminTopbar, ...adminOptions];
+        fadeTargets.forEach((target, i) => {
+          setTimeout(() => {
+            target.classList.add("fade-out");
+          }, i * 260);
+        });
+
+        setTimeout(
+          () => {
+            systemLog.classList.add("fullscreen");
+            typeChatMessage("CONNECTION ESTABLISHED.");
+          },
+          fadeTargets.length * 260 + 500,
+        );
       }
 
       function applyPrivilegeState() {
@@ -435,21 +606,39 @@
             return;
           }
 
-          const menu = fakeMenus[index];
-          const willOpen = !menu.classList.contains("visible");
-
-          closeAllMenus();
-          if (willOpen) {
-            menu.classList.add("visible");
-            const title =
-              btn.closest(".admin-option")?.querySelector("h3")?.textContent ||
-              "MANAGEMENT MODULE";
-            adminStatus.textContent = `SYSTEM STATUS: ELEVATED - ${title} MENU OPEN`;
-          } else {
-            adminStatus.textContent =
-              "SYSTEM STATUS: AUTHENTICATED - ELEVATED MANAGEMENT ENABLED";
-          }
+          const title =
+            btn.closest(".admin-option")?.querySelector("h3")?.textContent ||
+            "MANAGEMENT MODULE";
+          appendLog(
+            `[ERROR] ${title}: Server internet connection disabled. Reason: "System is undergoing maintenance".`,
+            "log-error",
+          );
+          enableInternetBtn.classList.remove("hidden");
+          adminStatus.textContent =
+            "SYSTEM STATUS: ELEVATED - INTERNET DISABLED, ACTION BLOCKED";
         });
+      });
+
+      enableInternetBtn.addEventListener("click", () => {
+        if (internetBooting || incidentTriggered) {
+          return;
+        }
+
+        internetBooting = true;
+        enableInternetBtn.disabled = true;
+
+        appendLog("[NET] ENABLE INTERNET command accepted.");
+        setTimeout(() => appendLog("[NET] Booting interface eth0..."), 700);
+        setTimeout(
+          () => appendLog("[NET] Restarting routing table and DNS cache..."),
+          1500,
+        );
+        setTimeout(
+          () => appendLog("[NET] Attempting handshake with upstream gateway..."),
+          2300,
+        );
+        setTimeout(() => appendLog("[NET] Connection established.", "log-ok"), 3200);
+        setTimeout(() => beginTakeoverSequence(), 3250);
       });
 
       input.addEventListener("keydown", (event) => {
@@ -472,6 +661,9 @@
           form.classList.add("hidden");
           clue.classList.add("hidden");
           adminPanel.classList.remove("hidden");
+          systemLog.classList.remove("hidden");
+          appendLog("[SYS] Admin panel unlocked.");
+          appendLog("[SYS] Awaiting management action...");
           applyPrivilegeState();
           syncPrivilegeToggle();
         } else {
