@@ -519,7 +519,7 @@
         logOutput.scrollTop = logOutput.scrollHeight;
       }
 
-      function typeChatMessage(message, prefix = "[CHAT] ") {
+      function typeChatMessage(message, prefix = "[CHAT] ", charDelay = 70) {
         const line = document.createElement("p");
         line.className = "log-entry log-chat";
         line.textContent = prefix;
@@ -533,7 +533,37 @@
           if (index >= message.length) {
             clearInterval(timer);
           }
-        }, 70);
+        }, charDelay);
+
+        return message.length * charDelay;
+      }
+
+      function wait(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function playTakeoverChatScript() {
+        let duration = typeChatMessage("CONNECTION ESTABLISHED.");
+        await wait(duration + 400);
+
+        duration = typeChatMessage("---- Welcome to the Hack Pretend Trials");
+        await wait(duration + 10000);
+
+        duration = typeChatMessage("Your first task is to:");
+        await wait(duration + 500);
+
+        duration = typeChatMessage(
+          "Hack into the server at https://drive.google.com/drive/folders/1n-CBAckArGtX1wbxAXMAj6E-FB8d3UsZ?usp=drive_link",
+          "[CHAT] ",
+          42,
+        );
+        await wait(duration + 300);
+
+        typeChatMessage(
+          "Steal all valuable data and send it here",
+          "[CHAT] ",
+          42,
+        );
       }
 
       function beginTakeoverSequence() {
@@ -556,7 +586,7 @@
               if (enableInternetBtn.parentNode) {
                 enableInternetBtn.remove();
               }
-              typeChatMessage("CONNECTION ESTABLISHED.");
+              playTakeoverChatScript();
             },
             fadeTargets.length * 260 + 500,
           );
