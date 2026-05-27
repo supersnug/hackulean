@@ -359,6 +359,21 @@
         max-height: calc(100vh - 84px);
         border-color: rgba(255, 92, 92, 0.45);
       }
+
+      .chat-box {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+      }
+
+      .chat-box input {
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .chat-box button {
+        width: 140px;
+      }
     </style>
   </head>
   <body>
@@ -478,6 +493,17 @@
       <section id="system-log" class="log-shell" aria-live="polite">
         <h3 class="log-head">SYSTEM INCIDENT LOG</h3>
         <div id="log-output" class="log-output"></div>
+        <form id="chat-form" class="chat-box hidden" autocomplete="off">
+          <input
+            id="chat-input"
+            name="chat"
+            type="text"
+            spellcheck="false"
+            placeholder="Send message to connection..."
+            required
+          />
+          <button type="submit">SEND</button>
+        </form>
         <button id="enable-internet" class="enable-btn hidden" type="button">
           ENABLE INTERNET
         </button>
@@ -501,11 +527,16 @@
       const adminOptions = document.querySelectorAll(".admin-option");
       const systemLog = document.getElementById("system-log");
       const logOutput = document.getElementById("log-output");
+      const chatForm = document.getElementById("chat-form");
+      const chatInput = document.getElementById("chat-input");
       const enableInternetBtn = document.getElementById("enable-internet");
       const incomingAlert = document.getElementById("incoming-alert");
 
       let internetBooting = false;
       let incidentTriggered = false;
+      let foundCredentialSet = false;
+      let foundBootSet = false;
+      let keywordCheckComplete = false;
 
       function closeAllMenus() {
         fakeMenus.forEach((menu) => menu.classList.remove("visible"));
@@ -547,7 +578,7 @@
         await wait(duration + 400);
 
         duration = typeChatMessage("---- Welcome to the Hack Pretend Trials");
-        await wait(duration + 10000);
+        await wait(duration + 5000);
 
         duration = typeChatMessage("Your first task is to:");
         await wait(duration + 500);
@@ -564,6 +595,45 @@
           "[CHAT] ",
           42,
         );
+      }
+
+      function evaluateChatMessage(message) {
+        if (keywordCheckComplete) {
+          return;
+        }
+
+        const lowered = message.toLowerCase();
+        const hasCredentialSet =
+          lowered.includes("5ystem3xpert1337!!!") && lowered.includes("password");
+        const hasBootSet =
+          lowered.includes("bootloader") && lowered.includes("unlocked");
+
+        if (hasCredentialSet) {
+          foundCredentialSet = true;
+        }
+
+        if (hasBootSet) {
+          foundBootSet = true;
+        }
+
+        if (foundCredentialSet && foundBootSet) {
+          keywordCheckComplete = true;
+          typeChatMessage("Congratulations, you found the info.");
+          typeChatMessage("Your next task is:");
+          return;
+        }
+
+        if (hasCredentialSet || hasBootSet) {
+          typeChatMessage(
+            "You found one piece of information, but we need more. Look for another piece of important information.",
+          );
+          return;
+        }
+
+        typeChatMessage(
+          "Your message is either random or contains only unimportant info.",
+        );
+        typeChatMessage("Look for important info on the server");
       }
 
       function beginTakeoverSequence() {
@@ -583,6 +653,8 @@
           setTimeout(
             () => {
               systemLog.classList.add("fullscreen");
+              chatForm.classList.remove("hidden");
+              chatInput.focus();
               if (enableInternetBtn.parentNode) {
                 enableInternetBtn.remove();
               }
@@ -675,6 +747,19 @@
         );
         setTimeout(() => appendLog("[NET] Connection established.", "log-ok"), 3200);
         setTimeout(() => beginTakeoverSequence(), 3250);
+      });
+
+      chatForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const message = chatInput.value.trim();
+
+        if (!message) {
+          return;
+        }
+
+        typeChatMessage(message, "[YOU] ", 22);
+        evaluateChatMessage(message);
+        chatInput.value = "";
       });
 
       input.addEventListener("keydown", (event) => {
