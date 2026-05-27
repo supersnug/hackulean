@@ -543,23 +543,24 @@
         incomingAlert.classList.add("show");
         setTimeout(() => {
           incomingAlert.classList.remove("show");
+          const fadeTargets = [adminTopbar, ...adminOptions];
+          fadeTargets.forEach((target, i) => {
+            setTimeout(() => {
+              target.classList.add("fade-out");
+            }, i * 260);
+          });
+
+          setTimeout(
+            () => {
+              systemLog.classList.add("fullscreen");
+              if (enableInternetBtn.parentNode) {
+                enableInternetBtn.remove();
+              }
+              typeChatMessage("CONNECTION ESTABLISHED.");
+            },
+            fadeTargets.length * 260 + 500,
+          );
         }, 3000);
-
-        const fadeTargets = [adminTopbar, ...adminOptions];
-        fadeTargets.forEach((target, i) => {
-          setTimeout(() => {
-            target.classList.add("fade-out");
-          }, i * 260);
-        });
-
-        setTimeout(
-          () => {
-            systemLog.classList.add("fullscreen");
-            enableInternetBtn.remove();
-            typeChatMessage("CONNECTION ESTABLISHED.");
-          },
-          fadeTargets.length * 260 + 500,
-        );
       }
 
       function applyPrivilegeState() {
