@@ -474,7 +474,7 @@
         <p id="admin-status" class="admin-status">SYSTEM STATUS: STANDBY</p>
       </section>
 
-      <section id="system-log" class="log-shell hidden" aria-live="polite">
+      <section id="system-log" class="log-shell" aria-live="polite">
         <h3 class="log-head">SYSTEM INCIDENT LOG</h3>
         <div id="log-output" class="log-output"></div>
         <button id="enable-internet" class="enable-btn hidden" type="button">
@@ -661,7 +661,6 @@
           form.classList.add("hidden");
           clue.classList.add("hidden");
           adminPanel.classList.remove("hidden");
-          systemLog.classList.remove("hidden");
           appendLog("[SYS] Admin panel unlocked.");
           appendLog("[SYS] Awaiting management action...");
           applyPrivilegeState();
@@ -673,6 +672,10 @@
       });
 
       syncPrivilegeToggle();
+
+      if (!logOutput.hasChildNodes()) {
+        appendLog("[SYS] Incident log standby. Awaiting access handshake...");
+      }
     </script>
   </body>
 </html>
