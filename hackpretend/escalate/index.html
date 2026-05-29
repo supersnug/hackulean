@@ -6,7 +6,7 @@
     <title>Escalate Privileges</title>
     <script>
       if (localStorage.getItem("hackulean_server_unavailable") === "1") {
-        window.location.replace("/error");
+        window.location.replace("/hackpretend/error");
       }
     </script>
     <style>
@@ -116,7 +116,7 @@
         <button type="submit">AUTHORIZE</button>
       </form>
 
-      <a class="hint" href="/error">Password Hint</a>
+      <a class="hint" href="/hackpretend/error">Password Hint</a>
       <p id="result" class="result" aria-live="polite"></p>
     </main>
 

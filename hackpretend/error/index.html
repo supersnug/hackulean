@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Server Resources Unavailable</title>
+    <style>
+      :root {
+        --bg: #14080a;
+        --panel: rgba(31, 12, 14, 0.9);
+        --accent: #ff6b6b;
+        --text: #ffe5e5;
+        --muted: #e7a0a0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: "Courier New", Courier, monospace;
+        color: var(--text);
+        background: radial-gradient(circle at 30% 20%, rgba(255, 107, 107, 0.15), transparent 50%), var(--bg);
+      }
+
+      .panel {
+        width: min(640px, 100%);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 24px;
+        box-shadow: 0 0 26px rgba(255, 107, 107, 0.18);
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: clamp(1.4rem, 4vw, 2rem);
+      }
+
+      p {
+        margin: 0 0 10px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      a {
+        display: inline-block;
+        margin-top: 10px;
+        color: var(--text);
+        text-decoration: none;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        padding: 10px 12px;
+      }
+
+      body.outage-mode {
+        --bg: #060b12;
+        --panel: rgba(6, 18, 30, 0.92);
+        --accent: #51d1ff;
+        --text: #dff6ff;
+        --muted: #9cd8ef;
+        background:
+          linear-gradient(90deg, transparent 24%, rgba(81, 209, 255, 0.1) 25%, rgba(81, 209, 255, 0.1) 26%, transparent 27%, transparent 74%, rgba(81, 209, 255, 0.1) 75%, rgba(81, 209, 255, 0.1) 76%, transparent 77%),
+          linear-gradient(0deg, transparent 24%, rgba(81, 209, 255, 0.1) 25%, rgba(81, 209, 255, 0.1) 26%, transparent 27%, transparent 74%, rgba(81, 209, 255, 0.1) 75%, rgba(81, 209, 255, 0.1) 76%, transparent 77%),
+          radial-gradient(circle at 65% 12%, rgba(81, 209, 255, 0.18), transparent 52%),
+          var(--bg);
+        background-size: 44px 44px, 44px 44px, auto, auto;
+      }
+
+      body.outage-mode .panel {
+        box-shadow: 0 0 30px rgba(81, 209, 255, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel">
+      <h1 id="error-title">SERVER RESOURCES UNAVAILABLE</h1>
+      <p id="error-line-1">Unable to fetch password hint resources at this time.</p>
+      <p id="error-line-2">Reason: remote archive index is in a restricted maintenance cycle.</p>
+      <p id="error-code">Error code: JjGztcKs</p>
+      <a id="error-link" href="/hackpretend/escalate">Return to Escalation Gateway</a>
+    </main>
+
+    <script>
+      const outageActive = localStorage.getItem("hackulean_server_unavailable") === "1";
+
+      if (outageActive) {
+        document.body.classList.add("outage-mode");
+
+        const title = document.getElementById("error-title");
+        const line1 = document.getElementById("error-line-1");
+        const line2 = document.getElementById("error-line-2");
+        const code = document.getElementById("error-code");
+        const link = document.getElementById("error-link");
+
+        title.textContent = "SERVER NOT AVAILABLE";
+        line1.textContent = "Critical relay saturation detected from oversized data transfer.";
+        line2.textContent = "All linked endpoints are temporarily unavailable until reset.";
+        code.textContent = "Error code: 9k7d61aq";
+        link.textContent = "";
+        link.href = "/error";
+      }
+    </script>
+  </body>
+</html>

@@ -6,7 +6,7 @@
     <title>Hack Pretend</title>
     <script>
       if (localStorage.getItem("hackulean_server_unavailable") === "1") {
-        window.location.replace("/error");
+        window.location.replace("/hackpretend/error");
       }
     </script>
     <style>
@@ -680,7 +680,7 @@
         restoreLoginPrompt();
         await typePanelMessage(
           partThreeMessage,
-          "Welcome to Part Three. https://sarulean.com/partthree",
+          "Welcome to Part Three. https://sarulean.com/hackpretend/partthree",
         );
       }
 

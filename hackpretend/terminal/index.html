@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terminal Access</title>
+    <script>
+      const OUTAGE_KEY = "hackulean_server_unavailable";
+      if (localStorage.getItem(OUTAGE_KEY) === "1") {
+        window.location.replace("/hackpretend/error");
+      }
+    </script>
+    <style>
+      :root {
+        --bg: #04070c;
+        --panel: #0b1220;
+        --line: #1f7a55;
+        --text: #b9f7d4;
+        --muted: #78b89a;
+        --bad: #ff7a7a;
+        --ok: #8fffbf;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+        display: grid;
+        place-items: center;
+        font-family: "Courier New", Courier, monospace;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 15% 15%, #143227 0%, transparent 35%),
+          radial-gradient(circle at 80% 0%, #102a3d 0%, transparent 30%),
+          var(--bg);
+      }
+
+      .shell {
+        width: min(920px, 100%);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(6, 10, 16, 0.95);
+        box-shadow: 0 0 28px rgba(49, 198, 138, 0.18);
+        overflow: hidden;
+      }
+
+      .head {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(31, 122, 85, 0.6);
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .body {
+        padding: 16px;
+      }
+
+      .gate h1 {
+        margin: 0 0 10px;
+        font-size: clamp(1.4rem, 4vw, 2rem);
+        letter-spacing: 1px;
+      }
+
+      .gate p {
+        margin: 0 0 10px;
+        color: var(--muted);
+      }
+
+      .gate form {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      input,
+      button {
+        font: inherit;
+      }
+
+      .gate input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #0a111c;
+        color: var(--text);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      .gate button {
+        width: 180px;
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: linear-gradient(180deg, #133625, #0d261b);
+        color: var(--text);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .gate button:hover {
+        filter: brightness(1.08);
+      }
+
+      .result {
+        min-height: 1.4em;
+        margin-top: 6px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--ok);
+      }
+
+      .bad {
+        color: var(--bad);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .terminal {
+        border: 1px solid rgba(31, 122, 85, 0.6);
+        border-radius: 10px;
+        background: #060b11;
+      }
+
+      .output {
+        min-height: 340px;
+        max-height: 56vh;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .line {
+        margin: 0;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .line + .line {
+        margin-top: 4px;
+      }
+
+      .prompt {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-top: 1px solid rgba(31, 122, 85, 0.5);
+        padding: 10px 12px;
+      }
+
+      .prompt-label {
+        color: #98f0c6;
+        white-space: nowrap;
+      }
+
+      #cmd {
+        flex: 1;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        outline: none;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .hint {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="head">
+        <span>secure relay:: /terminal</span>
+        <span>status: gated</span>
+      </div>
+
+      <div class="body">
+        <section id="gate" class="gate">
+          <h1>TERMINAL TEMPORARY ACCESS</h1>
+          <p>Enter the temporary access code. Format must begin with TERM.</p>
+          <form id="gate-form" autocomplete="off">
+            <input id="gate-input" name="code" type="text" spellcheck="false" required />
+            <button type="submit">UNLOCK TERMINAL</button>
+          </form>
+          <p id="gate-result" class="result" aria-live="polite"></p>
+        </section>
+
+        <section id="terminal" class="terminal hidden" aria-live="polite">
+          <div id="output" class="output"></div>
+          <div class="prompt">
+            <span class="prompt-label">guest@relay:~$</span>
+            <input id="cmd" type="text" spellcheck="false" autocomplete="off" />
+          </div>
+        </section>
+
+        <p class="hint">Commands: help, ls, cat, whoami, pwd, uname, date, echo, send_data, clear, exit</p>
+      </div>
+    </main>
+
+    <script>
+      const ACCESS_CODE = "TERM-1A07-9JTB";
+      const DATA_LIMIT = 1000000000;
+      const gate = document.getElementById("gate");
+      const gateForm = document.getElementById("gate-form");
+      const gateInput = document.getElementById("gate-input");
+      const gateResult = document.getElementById("gate-result");
+      const terminal = document.getElementById("terminal");
+      const output = document.getElementById("output");
+      const cmd = document.getElementById("cmd");
+
+      function appendLine(text) {
+        const p = document.createElement("p");
+        p.className = "line";
+        p.textContent = text;
+        output.appendChild(p);
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function simulateLag(ms = 1400) {
+        const start = performance.now();
+        while (performance.now() - start < ms) {
+          // Intentional short freeze to simulate terminal lag.
+        }
+      }
+
+      function runCommand(raw) {
+        const input = raw.trim();
+        if (!input) return;
+
+        appendLine(`guest@relay:~$ ${input}`);
+        const parts = input.split(/\s+/);
+        const command = parts[0].toLowerCase();
+        const args = parts.slice(1);
+
+        switch (command) {
+          case "help":
+            appendLine("Available commands: help, ls, cat, whoami, pwd, uname, date, echo, send_data, clear, exit");
+            appendLine("Warning: Do not send over 1000000000 data!");
+            appendLine("Tip: try cat briefing.txt");
+            break;
+          case "ls":
+            appendLine("briefing.txt  mission.log  users/  tmp/");
+            break;
+          case "cat":
+            if (!args[0]) {
+              appendLine("cat: missing file operand");
+            } else if (args[0] === "briefing.txt") {
+              appendLine("Part Three briefing: infiltrate quietly, leave no trace.");
+            } else if (args[0] === "mission.log") {
+              appendLine("[1] Access relay established");
+              appendLine("[2] Temporary shell granted");
+            } else {
+              appendLine(`cat: ${args[0]}: No such file`);
+            }
+            break;
+          case "whoami":
+            appendLine("guest");
+            break;
+          case "pwd":
+            appendLine("/home/guest");
+            break;
+          case "uname":
+            appendLine("HackuleanOS relay-kernel 5.7.13-sim");
+            break;
+          case "date":
+            appendLine(new Date().toString());
+            break;
+          case "echo":
+            appendLine(args.join(" "));
+            break;
+          case "send_data": {
+            const amount = Number(args[0]);
+            if (!args[0]) {
+              appendLine("usage: send_data <amount>");
+              break;
+            }
+
+            if (!Number.isFinite(amount)) {
+              appendLine("send_data: invalid amount");
+              break;
+            }
+
+            if (amount > DATA_LIMIT) {
+              appendLine(`Warning: payload ${amount} exceeds safe limit ${DATA_LIMIT}.`);
+              appendLine("Relay congestion detected... terminal is lagging.");
+              simulateLag();
+              localStorage.setItem(OUTAGE_KEY, "1");
+              appendLine("Critical failure: Server Not Available");
+              setTimeout(() => {
+                window.location.replace("/hackpretend/error");
+              }, 200);
+              break;
+            }
+
+            appendLine(`Data payload ${amount} sent successfully.`);
+            break;
+          }
+          case "clear":
+            output.textContent = "";
+            break;
+          case "exit":
+            appendLine("Session ended. Reload page to re-authenticate.");
+            cmd.disabled = true;
+            break;
+          default:
+            appendLine(`${command}: command not found`);
+            break;
+        }
+      }
+
+      gateInput.addEventListener("input", () => {
+        gateInput.value = gateInput.value.replace(/\s+/g, "").toUpperCase();
+      });
+
+      gateForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const entered = gateInput.value.trim().toUpperCase();
+
+        if (!entered.startsWith("TERM")) {
+          gateResult.textContent = "CODE FORMAT INVALID: must begin with TERM";
+          gateResult.className = "result bad";
+          return;
+        }
+
+        if (entered !== ACCESS_CODE) {
+          gateResult.textContent = "ACCESS DENIED";
+          gateResult.className = "result bad";
+          return;
+        }
+
+        gateResult.textContent = "ACCESS GRANTED";
+        gateResult.className = "result ok";
+        gate.classList.add("hidden");
+        terminal.classList.remove("hidden");
+        appendLine("Temporary shell granted.");
+        appendLine("Type 'help' to list commands.");
+        cmd.focus();
+      });
+
+      cmd.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        const raw = cmd.value;
+        cmd.value = "";
+        runCommand(raw);
+      });
+    </script>
+  </body>
+</html>
